@@ -15,13 +15,18 @@ const crud = (path) => ({
 })
 
 export const usuariosAPI = crud('usuarios')
-export const productosAPI = crud('productos')
 export const clientesAPI = crud('clientes')
 export const proveedoresAPI = crud('proveedores')
 export const ventasAPI = crud('ventas')
 export const comprasAPI = crud('compras')
 export const entregasAPI = crud('entregas')
 export const movimientosAPI = crud('movimientos')
+
+export const productosAPI = {
+  ...crud('productos'),
+  // Devuelve el stock de un producto desglosado por bodega
+  stockBodegas: (id) => api.get(`/productos/${id}/stock-bodegas/`),
+}
 
 export const kardexAPI = {
   list: (params) => api.get('/kardex/', { params }),
@@ -34,6 +39,7 @@ export const reportesAPI = {
 
 export const bodegasAPI = {
   ...crud('bodegas'),
+  // Lista el stock de una bodega (filtrable por bodega_id y/o producto_id)
   stock: (params) => api.get('/bodegas/stock/', { params }),
   transferir: (data) => api.post('/bodegas/transferir/', data),
 }
