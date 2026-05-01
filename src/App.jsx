@@ -21,8 +21,9 @@ import CXP from './pages/CXP/CXP'
 import Reportes from './pages/Reportes/Reportes'
 import Configuracion from './pages/Configuracion/Configuracion'
 import Nomina from './pages/Nomina/Nomina'
+// import Empleados   from './pages/Empleados/Empleados'  <- pendiente Fase 4
 
-// ── Layout principal ──────────────────────────────────────────────────────────
+// Layout principal
 function Layout() {
   return (
     <div className="app-layout">
@@ -34,14 +35,14 @@ function Layout() {
   )
 }
 
-// ── Ruta privada base ─────────────────────────────────────────────────────────
+// Ruta privada base
 function PrivateRoute() {
   const { user, loading } = useAuth()
   if (loading) return <div className="loading-screen">Cargando...</div>
   return user ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-// ── Ruta protegida por rol ────────────────────────────────────────────────────
+// Ruta protegida por rol
 function RoleRoute({ roles }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
@@ -49,83 +50,69 @@ function RoleRoute({ roles }) {
   return <Outlet />
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
-          {/* Pública */}
           <Route path="/login" element={<Login />} />
 
-          {/* Privadas */}
           <Route element={<PrivateRoute />}>
             <Route element={<Layout />}>
 
-              {/* Dashboard — todos */}
               <Route path="/dashboard" element={<Dashboard />} />
 
-              {/* Ventas — Admin, Contador, Vendedor */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor']} />}>
                 <Route path="/ventas" element={<Ventas />} />
                 <Route path="/clientes" element={<Clientes />} />
               </Route>
 
-              {/* Facturas — solo Admin y Contador */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
-                <Route path="/facturas" element={<Dashboard />} /> {/* placeholder hasta Fase 2 */}
+                <Route path="/facturas" element={<Dashboard />} />
                 <Route path="/cxc" element={<CXC />} />
                 <Route path="/cxp" element={<CXP />} />
                 <Route path="/reportes" element={<Reportes />} />
               </Route>
 
-              {/* Entregas — Admin, Contador, Vendedor, Logística */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica']} />}>
                 <Route path="/entregas" element={<Entregas />} />
               </Route>
 
-              {/* Inventario — todos excepto RRHH */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica', 'JefeFabrica', 'Bodeguero']} />}>
                 <Route path="/productos" element={<Productos />} />
               </Route>
 
-              {/* Bodegas y movimientos — Admin, Contador, Vendedor, Logística, Bodeguero */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero']} />}>
                 <Route path="/bodegas" element={<Bodegas />} />
                 <Route path="/movimientos" element={<Movimientos />} />
               </Route>
 
-              {/* Kardex — Admin, Contador, Bodeguero */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Bodeguero']} />}>
                 <Route path="/kardex" element={<Kardex />} />
               </Route>
 
-              {/* Compras y proveedores */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero']} />}>
                 <Route path="/compras" element={<Compras />} />
                 <Route path="/proveedores" element={<Proveedores />} />
               </Route>
 
-              {/* RRHH */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador', 'RRHH']} />}>
-                <Route path="/empleados" element={<Dashboard />} /> {/* placeholder hasta Fase 4 */}
+                <Route path="/empleados" element={<Dashboard />} />
                 <Route path="/nomina" element={<Nomina />} />
               </Route>
 
-              {/* Sistema — solo Admin */}
               <Route element={<RoleRoute roles={['Administrador']} />}>
                 <Route path="/usuarios" element={<Usuarios />} />
               </Route>
 
-              {/* Configuración — Admin y Contador */}
               <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
                 <Route path="/configuracion" element={<Configuracion />} />
               </Route>
 
-              {/* Redirect raíz */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
             </Route>
           </Route>
         </Routes>
