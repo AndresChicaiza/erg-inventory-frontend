@@ -53,8 +53,6 @@ function RoleRoute({ roles }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
 
@@ -116,7 +114,6 @@ export default function App() {
             </Route>
           </Route>
         </Routes>
-      </BrowserRouter>
     </AuthProvider>
   )
 }
