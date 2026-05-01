@@ -1,64 +1,135 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import Layout from './components/Layout'
+import Sidebar from './components/Sidebar'
+
+// Páginas
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Usuarios from './pages/Usuarios/Usuarios'
-import Productos from './pages/Productos/Productos'
 import Clientes from './pages/Clientes/Clientes'
 import Proveedores from './pages/Proveedores/Proveedores'
+import Productos from './pages/Productos/Productos'
+import Bodegas from './pages/Bodegas/Bodegas'
+import Movimientos from './pages/Movimientos/Movimientos'
+import Kardex from './pages/Kardex/Kardex'
 import Ventas from './pages/Ventas/Ventas'
 import Compras from './pages/Compras/Compras'
 import Entregas from './pages/Entregas/Entregas'
-import Movimientos from './pages/Movimientos/Movimientos'
-import Kardex from './pages/Kardex/Kardex'
-import Reportes from './pages/Reportes/Reportes'
-import Configuracion from './pages/Configuracion/Configuracion'
-import Bodegas from './pages/Bodegas/Bodegas'
 import CXC from './pages/CXC/CXC'
 import CXP from './pages/CXP/CXP'
+import Reportes from './pages/Reportes/Reportes'
+import Configuracion from './pages/Configuracion/Configuracion'
 import Nomina from './pages/Nomina/Nomina'
 
-function PrivateRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text2)' }}>
-      Cargando...
+// ── Layout principal ──────────────────────────────────────────────────────────
+function Layout() {
+  return (
+    <div className="app-layout">
+      <Sidebar />
+      <main className="main-content">
+        <Outlet />
+      </main>
     </div>
   )
-  return user ? <Layout>{children}</Layout> : <Navigate to="/login" replace />
 }
 
-function AppRoutes() {
+// ── Ruta privada base ─────────────────────────────────────────────────────────
+function PrivateRoute() {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="loading-screen">Cargando...</div>
+  return user ? <Outlet /> : <Navigate to="/login" replace />
+}
+
+// ── Ruta protegida por rol ────────────────────────────────────────────────────
+function RoleRoute({ roles }) {
   const { user } = useAuth()
-  return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-      <Route path="/usuarios" element={<PrivateRoute><Usuarios /></PrivateRoute>} />
-      <Route path="/productos" element={<PrivateRoute><Productos /></PrivateRoute>} />
-      <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>} />
-      <Route path="/proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />
-      <Route path="/ventas" element={<PrivateRoute><Ventas /></PrivateRoute>} />
-      <Route path="/compras" element={<PrivateRoute><Compras /></PrivateRoute>} />
-      <Route path="/entregas" element={<PrivateRoute><Entregas /></PrivateRoute>} />
-      <Route path="/movimientos" element={<PrivateRoute><Movimientos /></PrivateRoute>} />
-      <Route path="/kardex" element={<PrivateRoute><Kardex /></PrivateRoute>} />
-      <Route path="/reportes" element={<PrivateRoute><Reportes /></PrivateRoute>} />
-      <Route path="/configuracion" element={<PrivateRoute><Configuracion /></PrivateRoute>} />
-      <Route path="/bodegas" element={<PrivateRoute><Bodegas /></PrivateRoute>} />
-      <Route path="/cxc" element={<PrivateRoute><CXC /></PrivateRoute>} />
-      <Route path="/cxp" element={<PrivateRoute><CXP /></PrivateRoute>} />
-      <Route path="/nomina" element={<PrivateRoute><Nomina /></PrivateRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  )
+  if (!user) return <Navigate to="/login" replace />
+  if (!roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
+  return <Outlet />
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <BrowserRouter>
+        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        <Routes>
+          {/* Pública */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Privadas */}
+          <Route element={<PrivateRoute />}>
+            <Route element={<Layout />}>
+
+              {/* Dashboard — todos */}
+              <Route path="/dashboard" element={<Dashboard />} />
+
+              {/* Ventas — Admin, Contador, Vendedor */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor']} />}>
+                <Route path="/ventas" element={<Ventas />} />
+                <Route path="/clientes" element={<Clientes />} />
+              </Route>
+
+              {/* Facturas — solo Admin y Contador */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
+                <Route path="/facturas" element={<Dashboard />} /> {/* placeholder hasta Fase 2 */}
+                <Route path="/cxc" element={<CXC />} />
+                <Route path="/cxp" element={<CXP />} />
+                <Route path="/reportes" element={<Reportes />} />
+              </Route>
+
+              {/* Entregas — Admin, Contador, Vendedor, Logística */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica']} />}>
+                <Route path="/entregas" element={<Entregas />} />
+              </Route>
+
+              {/* Inventario — todos excepto RRHH */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica', 'JefeFabrica', 'Bodeguero']} />}>
+                <Route path="/productos" element={<Productos />} />
+              </Route>
+
+              {/* Bodegas y movimientos — Admin, Contador, Vendedor, Logística, Bodeguero */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero']} />}>
+                <Route path="/bodegas" element={<Bodegas />} />
+                <Route path="/movimientos" element={<Movimientos />} />
+              </Route>
+
+              {/* Kardex — Admin, Contador, Bodeguero */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Bodeguero']} />}>
+                <Route path="/kardex" element={<Kardex />} />
+              </Route>
+
+              {/* Compras y proveedores */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero']} />}>
+                <Route path="/compras" element={<Compras />} />
+                <Route path="/proveedores" element={<Proveedores />} />
+              </Route>
+
+              {/* RRHH */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador', 'RRHH']} />}>
+                <Route path="/empleados" element={<Dashboard />} /> {/* placeholder hasta Fase 4 */}
+                <Route path="/nomina" element={<Nomina />} />
+              </Route>
+
+              {/* Sistema — solo Admin */}
+              <Route element={<RoleRoute roles={['Administrador']} />}>
+                <Route path="/usuarios" element={<Usuarios />} />
+              </Route>
+
+              {/* Configuración — Admin y Contador */}
+              <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
+                <Route path="/configuracion" element={<Configuracion />} />
+              </Route>
+
+              {/* Redirect raíz */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </AuthProvider>
   )
 }

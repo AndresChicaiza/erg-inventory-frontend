@@ -1,51 +1,134 @@
-import { NavLink } from 'react-router-dom'
-const nav = [
-  { s: 'Principal', items: [{ to: '/', icon: '🏠', label: 'Dashboard', bg: 'rgba(59,130,246,.1)' }] },
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+
+// Definición del menú por sección y permisos por rol
+const MENU = [
   {
-    s: 'Gestión', items: [
-      { to: '/usuarios', icon: '👥', label: 'Usuarios', bg: 'rgba(139,92,246,.1)' },
-      { to: '/clientes', icon: '👤', label: 'Clientes', bg: 'rgba(6,182,212,.1)' },
-      { to: '/proveedores', icon: '🏭', label: 'Proveedores', bg: 'rgba(249,115,22,.1)' },
+    section: 'PRINCIPAL',
+    items: [
+      { path: '/dashboard', icon: '📊', label: 'Dashboard', roles: 'ALL' },
     ]
   },
   {
-    s: 'Inventario', items: [
-      { to: '/productos', icon: '📦', label: 'Productos', bg: 'rgba(16,185,129,.1)' },
-      { to: '/bodegas', icon: '🏪', label: 'Bodegas', bg: 'rgba(99,102,241,.1)' },
-      { to: '/movimientos', icon: '↔️', label: 'Movimientos', bg: 'rgba(99,102,241,.1)' },
-      { to: '/kardex', icon: '📋', label: 'Kardex', bg: 'rgba(20,184,166,.1)' },
+    section: 'VENTAS',
+    items: [
+      { path: '/facturas', icon: '🧾', label: 'Facturas', roles: ['Administrador', 'Contador'] },
+      { path: '/ventas', icon: '💰', label: 'Ventas', roles: ['Administrador', 'Contador', 'Vendedor'] },
+      { path: '/clientes', icon: '👥', label: 'Clientes', roles: ['Administrador', 'Contador', 'Vendedor'] },
+      { path: '/entregas', icon: '🚚', label: 'Entregas', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica'] },
     ]
   },
   {
-    s: 'Comercial', items: [
-      { to: '/ventas', icon: '💰', label: 'Ventas', bg: 'rgba(16,185,129,.1)' },
-      { to: '/compras', icon: '🛒', label: 'Compras', bg: 'rgba(99,102,241,.1)' },
-      { to: '/entregas', icon: '🚚', label: 'Entregas', bg: 'rgba(245,158,11,.1)' },
-      { to: '/cxc', icon: '📥', label: 'CXC', bg: 'rgba(16,185,129,.1)' },
-      { to: '/cxp', icon: '📤', label: 'CXP', bg: 'rgba(239,68,68,.1)' },
-      { to: '/nomina', icon: '👔', label: 'Nómina', bg: 'rgba(139,92,246,.1)' },
+    section: 'INVENTARIO',
+    items: [
+      { path: '/productos', icon: '📦', label: 'Productos', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica', 'JefeFabrica', 'Bodeguero'] },
+      { path: '/bodegas', icon: '🏪', label: 'Bodegas', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero'] },
+      { path: '/movimientos', icon: '🔄', label: 'Movimientos', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica'] },
+      { path: '/kardex', icon: '📋', label: 'Kardex', roles: ['Administrador', 'Contador', 'Bodeguero'] },
     ]
   },
   {
-    s: 'Sistema', items: [
-      { to: '/reportes', icon: '📊', label: 'Reportes', bg: 'rgba(236,72,153,.1)' },
-      { to: '/configuracion', icon: '⚙️', label: 'Configuración', bg: 'rgba(100,116,139,.1)' },
+    section: 'COMPRAS',
+    items: [
+      { path: '/compras', icon: '🛒', label: 'Órdenes de Compra', roles: ['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero'] },
+      { path: '/proveedores', icon: '🏭', label: 'Proveedores', roles: ['Administrador', 'Contador', 'Vendedor'] },
+    ]
+  },
+  {
+    section: 'FINANZAS',
+    items: [
+      { path: '/cxc', icon: '💳', label: 'CXC', roles: ['Administrador', 'Contador'] },
+      { path: '/cxp', icon: '💸', label: 'CXP', roles: ['Administrador', 'Contador'] },
+      { path: '/reportes', icon: '📈', label: 'Reportes', roles: ['Administrador', 'Contador'] },
+    ]
+  },
+  {
+    section: 'RRHH',
+    items: [
+      { path: '/empleados', icon: '👨‍💼', label: 'Empleados', roles: ['Administrador', 'Contador', 'RRHH'] },
+      { path: '/nomina', icon: '💵', label: 'Nómina', roles: ['Administrador', 'Contador', 'RRHH'] },
+    ]
+  },
+  {
+    section: 'SISTEMA',
+    items: [
+      { path: '/usuarios', icon: '👤', label: 'Usuarios', roles: ['Administrador'] },
+      { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['Administrador', 'Contador'] },
     ]
   },
 ]
+
 export default function Sidebar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const canSee = (roles) => {
+    if (roles === 'ALL') return true
+    return roles.includes(user?.rol)
+  }
+
+  const handleLogout = () => { logout(); navigate('/login') }
+
+  const rolLabel = {
+    Administrador: 'Administrador', Contador: 'Contador',
+    Vendedor: 'Vendedor', Logistica: 'Logística',
+    JefeFabrica: 'Jefe de Fábrica', Bodeguero: 'Bodeguero', RRHH: 'RRHH',
+  }
+
   return (
     <aside className="sidebar">
-      {nav.map(({ s, items }) => (
-        <div className="sidebar-section" key={s}>
-          <div className="sidebar-label">{s}</div>
-          {items.map(({ to, icon, label, bg }) => (
-            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <div className="nav-icon" style={{ background: bg }}>{icon}</div>{label}
-            </NavLink>
-          ))}
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="logo-icon">🌋</div>
+        <div>
+          <div className="logo-name">ERG Inventory</div>
+          <div className="logo-sub">Suministros Dacar</div>
         </div>
-      ))}
+      </div>
+
+      {/* Usuario actual */}
+      <div style={{
+        margin: '0 12px 16px', padding: '10px 12px', borderRadius: 8,
+        background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.2)'
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)' }}>{user?.nombre}</div>
+        <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 2 }}>{rolLabel[user?.rol] || user?.rol}</div>
+        {user?.sede_nombre && (
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>📍 {user.sede_nombre}</div>
+        )}
+      </div>
+
+      {/* Menú */}
+      <nav className="sidebar-nav">
+        {MENU.map(({ section, items }) => {
+          const visibles = items.filter(i => canSee(i.roles))
+          if (visibles.length === 0) return null
+          return (
+            <div key={section}>
+              <div className="nav-section">{section}</div>
+              {visibles.map(item => (
+                <NavLink key={item.path} to={item.path}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                  <span className="nav-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )
+        })}
+      </nav>
+
+      {/* Logout */}
+      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+        <button onClick={handleLogout} style={{
+          width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none',
+          background: 'rgba(239,68,68,.1)', color: 'var(--danger)',
+          cursor: 'pointer', fontSize: 13, fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          🚪 Cerrar sesión
+        </button>
+      </div>
     </aside>
   )
 }
