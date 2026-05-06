@@ -66,12 +66,8 @@ export default function CXP() {
 
   const loadResumen = async () => {
     try {
-      const r = await cxpAPI.list({ por_proveedor: true })
-      // Llamar al endpoint específico
-      const resp = await fetch('/api/cxp/por-proveedor/', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
-      })
-      const data = await resp.json()
+      const resp = await cxpAPI.porProveedor()
+      const data = resp.data
       setPorProveedor(Array.isArray(data) ? data : [])
     } catch { }
   }

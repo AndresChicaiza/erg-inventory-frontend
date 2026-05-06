@@ -114,11 +114,14 @@ export const nominaAPI = {
 export const cxcAPI = {
   ...crud('cxc'),
   registrarPago: (data) => api.post('/cxc/pagos/', data),
+  resumen: () => api.get('/cxc/resumen/'),
 }
 
 export const cxpAPI = {
   ...crud('cxp'),
   registrarPago: (data) => api.post('/cxp/pagos/', data),
+  resumen: () => api.get('/cxp/resumen/'),
+  porProveedor: () => api.get('/cxp/por-proveedor/'),
 }
 
 // ── Reportes ──────────────────────────────────────────────────────────────────

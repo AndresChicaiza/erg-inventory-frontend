@@ -64,7 +64,7 @@ export default function CXC() {
 
       // Cargar resumen
       try {
-        const r = await cxcAPI.get('resumen')
+        const r = await cxcAPI.resumen()
         setResumen(r.data)
       } catch { }
     } catch { toast.error('Error cargando datos') }
