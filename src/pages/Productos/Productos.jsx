@@ -90,7 +90,7 @@ export default function Productos() {
   const del = async (id) => {
     if (!confirm('¿Eliminar este producto?')) return
     try { await productosAPI.delete(id); toast.success('Producto eliminado'); load() }
-    catch { toast.error('No se puede eliminar') }
+    catch (e) { toast.error(e.response?.data?.error || 'No se puede eliminar') }
   }
 
   return (
