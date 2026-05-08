@@ -27,7 +27,7 @@ export const configuracionAPI = {
   update: (data) => api.patch('/configuracion/', data),
 }
 
-// ── Clientes y Proveedores (con datos tributarios) ────────────────────────────
+// ── Clientes y Proveedores ────────────────────────────────────────────────────
 export const clientesAPI = crud('clientes')
 export const proveedoresAPI = crud('proveedores')
 
@@ -35,9 +35,6 @@ export const proveedoresAPI = crud('proveedores')
 export const productosAPI = {
   ...crud('productos'),
   stockBodegas: (id) => api.get(`/productos/${id}/stock-bodegas/`),
-  productosFinal: (params) => api.get('/productos/', { params: { ...params, tipo: 'TERMINADO' } }),
-  productosMp: (params) => api.get('/productos/', { params: { ...params, tipo: 'MATERIA_PRIMA' } }),
-  productosTimenda: (params) => api.get('/productos/', { params: { ...params, tipo: 'TIENDA' } }),
 }
 
 // ── Bodegas ───────────────────────────────────────────────────────────────────
@@ -52,19 +49,34 @@ export const ventasAPI = {
   ...crud('ventas'),
   porSede: (sedeId) => api.get('/ventas/', { params: { sede: sedeId } }),
   porEmpleado: (userId) => api.get('/ventas/', { params: { responsable: userId } }),
-  comisiones: (params) => api.get('/ventas/comisiones/', { params }),
 }
 
 // ── Facturación ───────────────────────────────────────────────────────────────
 export const facturasAPI = {
   ...crud('facturas'),
+
+  // Resumen para dashboard
+  resumen: () => api.get('/facturas/resumen/'),
+
+  // Cálculo de impuestos sin guardar
+  calcularImpuestos: (data) => api.post('/facturas/calcular-impuestos/', data),
+
+  // Emitir / anular
   emitir: (id) => api.post(`/facturas/${id}/emitir/`),
   anular: (id, motivo) => api.post(`/facturas/${id}/anular/`, { motivo }),
+
+  // PDF — respuesta blob
   pdf: (id) => api.get(`/facturas/${id}/pdf/`, { responseType: 'blob' }),
-  enviarEmail: (id) => api.post(`/facturas/${id}/enviar-email/`),
-  calcularImpuestos: (data) => api.post('/facturas/calcular-impuestos/', data),
+
+  // Detalles (ítems) de una factura
+  getDetalles: (facturaId) => api.get(`/facturas/${facturaId}/detalles/`),
+  createDetalle: (facturaId, data) => api.post(`/facturas/${facturaId}/detalles/`, data),
+  deleteDetalles: (facturaId) => api.delete(`/facturas/${facturaId}/detalles/`),
+  updateDetalle: (id, data) => api.patch(`/facturas/detalles/${id}/`, data),
+  deleteDetalle: (id) => api.delete(`/facturas/detalles/${id}/`),
 }
 
+// ── Notas crédito ─────────────────────────────────────────────────────────────
 export const notasCreditoAPI = crud('notas-credito')
 
 // ── Compras / Órdenes de compra ───────────────────────────────────────────────
@@ -81,7 +93,7 @@ export const entregasAPI = {
   actualizarEstado: (id, data) => api.patch(`/entregas/${id}/estado/`, data),
 }
 
-// ── Movimientos de inventario ─────────────────────────────────────────────────
+// ── Movimientos ───────────────────────────────────────────────────────────────
 export const movimientosAPI = {
   ...crud('movimientos'),
   traslado: (data) => api.post('/movimientos/traslado/', data),
@@ -92,6 +104,21 @@ export const movimientosAPI = {
 export const kardexAPI = {
   list: (params) => api.get('/kardex/', { params }),
   productos: () => api.get('/kardex/productos/'),
+}
+
+// ── CXC ───────────────────────────────────────────────────────────────────────
+export const cxcAPI = {
+  ...crud('cxc'),
+  registrarPago: (data) => api.post('/cxc/pagos/', data),
+  resumen: () => api.get('/cxc/resumen/'),
+}
+
+// ── CXP ───────────────────────────────────────────────────────────────────────
+export const cxpAPI = {
+  ...crud('cxp'),
+  registrarPago: (data) => api.post('/cxp/pagos/', data),
+  resumen: () => api.get('/cxp/resumen/'),
+  porProveedor: () => api.get('/cxp/por-proveedor/'),
 }
 
 // ── RRHH / Empleados ──────────────────────────────────────────────────────────
@@ -107,21 +134,6 @@ export const nominaAPI = {
   novedades: crud('nomina/novedades'),
   cerrar: (id) => api.post(`/nomina/periodos/${id}/cerrar/`),
   generarComisiones: (id, data) => api.post(`/nomina/periodos/${id}/comisiones/`, data),
-  colilla: (id, empId) => api.get(`/nomina/periodos/${id}/colilla/${empId}/`, { responseType: 'blob' }),
-}
-
-// ── CXC y CXP ────────────────────────────────────────────────────────────────
-export const cxcAPI = {
-  ...crud('cxc'),
-  registrarPago: (data) => api.post('/cxc/pagos/', data),
-  resumen: () => api.get('/cxc/resumen/'),
-}
-
-export const cxpAPI = {
-  ...crud('cxp'),
-  registrarPago: (data) => api.post('/cxp/pagos/', data),
-  resumen: () => api.get('/cxp/resumen/'),
-  porProveedor: () => api.get('/cxp/por-proveedor/'),
 }
 
 // ── Reportes ──────────────────────────────────────────────────────────────────
@@ -129,7 +141,6 @@ export const reportesAPI = {
   resumen: () => api.get('/reportes/resumen/'),
   ventasPorSede: (params) => api.get('/reportes/ventas-sede/', { params }),
   tributario: (params) => api.get('/reportes/tributario/', { params }),
-  nomina: (params) => api.get('/reportes/nomina/', { params }),
 }
 
 // ── Tarifas tributarias ───────────────────────────────────────────────────────

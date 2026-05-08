@@ -1,7 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-// Definición del menú por sección y permisos por rol
 const MENU = [
   {
     section: 'PRINCIPAL',
@@ -30,15 +29,15 @@ const MENU = [
   {
     section: 'COMPRAS',
     items: [
-      { path: '/compras', icon: '🛒', label: 'Órdenes de Compra', roles: ['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero'] },
+      { path: '/compras', icon: '🛒', label: 'Órd. Compra', roles: ['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero'] },
       { path: '/proveedores', icon: '🏭', label: 'Proveedores', roles: ['Administrador', 'Contador', 'Vendedor'] },
     ]
   },
   {
     section: 'FINANZAS',
     items: [
-      { path: '/cxc', icon: '💳', label: 'CXC', roles: ['Administrador', 'Contador'] },
-      { path: '/cxp', icon: '💸', label: 'CXP', roles: ['Administrador', 'Contador'] },
+      { path: '/cxc', icon: '📥', label: 'CXC', roles: ['Administrador', 'Contador'] },
+      { path: '/cxp', icon: '📤', label: 'CXP', roles: ['Administrador', 'Contador'] },
       { path: '/reportes', icon: '📈', label: 'Reportes', roles: ['Administrador', 'Contador'] },
     ]
   },
@@ -66,8 +65,6 @@ export default function Sidebar() {
     if (roles === 'ALL') return true
     return roles.includes(user?.rol)
   }
-
-  const handleLogout = () => { logout(); navigate('/login') }
 
   const rolLabel = {
     Administrador: 'Administrador', Contador: 'Contador',
@@ -102,7 +99,7 @@ export default function Sidebar() {
       <nav className="sidebar-nav">
         {MENU.map(({ section, items }) => {
           const visibles = items.filter(i => canSee(i.roles))
-          if (visibles.length === 0) return null
+          if (!visibles.length) return null
           return (
             <div key={section}>
               <div className="nav-section">{section}</div>
@@ -120,7 +117,7 @@ export default function Sidebar() {
 
       {/* Logout */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-        <button onClick={handleLogout} style={{
+        <button onClick={() => { logout(); navigate('/login') }} style={{
           width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none',
           background: 'rgba(239,68,68,.1)', color: 'var(--danger)',
           cursor: 'pointer', fontSize: 13, fontWeight: 600,
