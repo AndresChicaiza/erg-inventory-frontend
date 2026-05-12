@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { facturasAPI, clientesAPI, productosAPI } from '../../api/endpoints'
-import { fmt, fmtDate } from '../helpers.jsx'
+import { fmt } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
 const IVA_TIPOS = [
@@ -40,11 +40,12 @@ const itemVacio = () => ({
     descuento_pct: 0,
     es_obsequio: false,
     iva_tipo: '19',
+    iva_incluido: false,   // ← nuevo campo
 })
 
 export default function NuevaFactura() {
     const navigate = useNavigate()
-    const { id } = useParams()  // si hay id → editar borrador
+    const { id } = useParams()
     const esEdicion = !!id
 
     const [clientes, setClientes] = useState([])
@@ -52,18 +53,13 @@ export default function NuevaFactura() {
     const [loading, setLoading] = useState(false)
     const [calculando, setCalculando] = useState(false)
 
-    // Datos de la factura
     const [clienteId, setClienteId] = useState('')
     const [condicion, setCondicion] = useState('Contado')
     const [medioPago, setMedioPago] = useState('Efectivo')
     const [conceptoRet, setConceptoRet] = useState('COMPRAS')
     const [notas, setNotas] = useState('')
     const [items, setItems] = useState([itemVacio()])
-
-    // Totales calculados
     const [totales, setTotales] = useState(null)
-
-    // Factura existente (edición)
     const [factura, setFactura] = useState(null)
 
     useEffect(() => {
@@ -93,29 +89,44 @@ export default function NuevaFactura() {
                         descuento_pct: d.descuento_pct,
                         es_obsequio: d.es_obsequio,
                         iva_tipo: d.iva_tipo,
+                        iva_incluido: false,
                     })))
                 }
             }).catch(() => toast.error('Error cargando factura'))
         }
     }, [id])
 
-    // Calcular impuestos en tiempo real
+    // ── Calcular impuestos en tiempo real ────────────────────────────────────
     const calcular = useCallback(async () => {
         if (!clienteId || !items.some(i => i.precio_unitario > 0)) {
             setTotales(null); return
         }
         setCalculando(true)
         try {
+            // Si el producto tiene IVA incluido, mandamos el precio SIN IVA
+            const itemsParaCalculo = items
+                .filter(i => i.descripcion && parseFloat(i.precio_unitario) > 0)
+                .map(i => {
+                    let precio = parseFloat(i.precio_unitario) || 0
+                    const iva = i.iva_tipo
+
+                    // Si tiene IVA incluido, extraer la base sin IVA
+                    if (i.iva_incluido && iva === '19') precio = precio / 1.19
+                    if (i.iva_incluido && iva === '5') precio = precio / 1.05
+
+                    return {
+                        cantidad: parseFloat(i.cantidad) || 0,
+                        precio_unitario: Math.round(precio * 100) / 100,
+                        descuento_pct: i.es_obsequio ? 100 : parseFloat(i.descuento_pct) || 0,
+                        es_obsequio: i.es_obsequio,
+                        iva_tipo: i.iva_tipo,
+                    }
+                })
+
             const r = await facturasAPI.calcularImpuestos({
                 cliente_id: clienteId,
                 concepto_retefuente: conceptoRet,
-                items: items.filter(i => i.descripcion && i.precio_unitario > 0).map(i => ({
-                    cantidad: parseFloat(i.cantidad) || 0,
-                    precio_unitario: parseFloat(i.precio_unitario) || 0,
-                    descuento_pct: i.es_obsequio ? 100 : parseFloat(i.descuento_pct) || 0,
-                    es_obsequio: i.es_obsequio,
-                    iva_tipo: i.iva_tipo,
-                })),
+                items: itemsParaCalculo,
             })
             setTotales(r.data)
         } catch { setTotales(null) }
@@ -127,27 +138,32 @@ export default function NuevaFactura() {
         return () => clearTimeout(timer)
     }, [calcular])
 
-    // Manejo de ítems
+    // ── Manejo de ítems ───────────────────────────────────────────────────────
     const addItem = () => setItems(p => [...p, itemVacio()])
     const delItem = (id) => setItems(p => p.filter(i => i._id !== id))
+
     const updItem = (id, key, val) => setItems(p =>
         p.map(i => {
             if (i._id !== id) return i
             const next = { ...i, [key]: val }
-            // Si selecciona un producto, autocompletar descripción y precio
+
+            // Al seleccionar producto — autocompletar campos
             if (key === 'producto' && val) {
                 const prod = productos.find(p => p.id == val)
                 if (prod) {
                     next.descripcion = prod.nombre
-                    next.precio_unitario = prod.precio_venta
+                    next.precio_unitario = prod.precio_venta  // precio que viene del producto (con o sin IVA)
+                    next.iva_tipo = prod.iva_tipo || '19'
+                    next.iva_incluido = prod.iva_incluido || false
                 }
             }
-            // Si marca obsequio, descuento = 100
+
             if (key === 'es_obsequio') next.descuento_pct = val ? 100 : 0
             return next
         })
     )
 
+    // ── Guardar factura ───────────────────────────────────────────────────────
     const guardar = async (emitir = false) => {
         if (!clienteId) { toast.error('Selecciona un cliente'); return }
         const itemsValidos = items.filter(i => i.descripcion && parseFloat(i.precio_unitario) > 0)
@@ -157,7 +173,6 @@ export default function NuevaFactura() {
         try {
             let facturaId = id
 
-            // 1. Crear o actualizar la cabecera
             const payload = {
                 cliente: clienteId,
                 condicion_pago: condicion,
@@ -173,16 +188,22 @@ export default function NuevaFactura() {
                 facturaId = r.data.id
             }
 
-            // 2. Guardar ítems (borrar los existentes y crear nuevos)
+            // Guardar ítems — si tiene IVA incluido, guardar precio SIN IVA
             await facturasAPI.deleteDetalles(facturaId)
             for (let ord = 0; ord < itemsValidos.length; ord++) {
                 const it = itemsValidos[ord]
+                let precio = parseFloat(it.precio_unitario) || 0
+
+                if (it.iva_incluido && it.iva_tipo === '19') precio = precio / 1.19
+                if (it.iva_incluido && it.iva_tipo === '5') precio = precio / 1.05
+                precio = Math.round(precio * 100) / 100
+
                 await facturasAPI.createDetalle(facturaId, {
                     factura: facturaId,
                     producto: it.producto || null,
                     descripcion: it.descripcion,
                     cantidad: it.cantidad,
-                    precio_unitario: it.precio_unitario,
+                    precio_unitario: precio,
                     descuento_pct: it.es_obsequio ? 100 : it.descuento_pct,
                     es_obsequio: it.es_obsequio,
                     iva_tipo: it.iva_tipo,
@@ -190,7 +211,6 @@ export default function NuevaFactura() {
                 })
             }
 
-            // 3. Emitir si se pidió
             if (emitir) {
                 await facturasAPI.emitir(facturaId)
                 toast.success('✅ Factura emitida exitosamente')
@@ -200,7 +220,7 @@ export default function NuevaFactura() {
 
             navigate(`/facturas/${facturaId}`)
         } catch (e) {
-            toast.error(e.response?.data?.error || 'Error al guardar')
+            toast.error(e.response?.data?.error || 'Error al guardar la factura')
         } finally { setLoading(false) }
     }
 
@@ -226,13 +246,12 @@ export default function NuevaFactura() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
 
-                {/* ── Columna izquierda: formulario ── */}
+                {/* ── Columna izquierda ── */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                     {/* Datos generales */}
                     <div className="table-wrapper" style={{ padding: 20 }}>
                         <div style={{ fontWeight: 700, marginBottom: 16, color: 'var(--text1)' }}>📋 Datos de la Factura</div>
-
                         <div className="form-row">
                             <div className="form-group" style={{ flex: 2 }}>
                                 <label>Cliente *</label>
@@ -254,7 +273,6 @@ export default function NuevaFactura() {
                                 </select>
                             </div>
                         </div>
-
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Medio de pago</label>
@@ -271,22 +289,21 @@ export default function NuevaFactura() {
                                 </select>
                             </div>
                         </div>
-
                         {clienteSel && (
                             <div style={{
-                                padding: '10px 14px', borderRadius: 8,
+                                padding: '10px 14px', borderRadius: 8, fontSize: 12, color: 'var(--text2)',
                                 background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.15)',
-                                fontSize: 12, color: 'var(--text2)', display: 'flex', gap: 20, flexWrap: 'wrap'
+                                display: 'flex', gap: 20, flexWrap: 'wrap'
                             }}>
                                 <span>📍 {clienteSel.ciudad || '—'}</span>
-                                <span>📋 Régimen: {clienteSel.regimen_tributario?.replace('_', ' ')}</span>
-                                <span>{clienteSel.agente_retenedor ? '⚠️ Retiene' : '✅ No retiene'}</span>
-                                <span>{clienteSel.gran_contribuyente ? '🏢 Gran Contribuyente' : ''}</span>
+                                <span>📋 {clienteSel.regimen_tributario?.replace('_', ' ')}</span>
+                                <span>{clienteSel.agente_retenedor ? '⚠️ Aplica retenciones' : '✅ Sin retenciones'}</span>
+                                {clienteSel.gran_contribuyente && <span>🏢 Gran Contribuyente</span>}
                             </div>
                         )}
                     </div>
 
-                    {/* Ítems */}
+                    {/* Tabla de ítems */}
                     <div className="table-wrapper" style={{ padding: 20 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                             <span style={{ fontWeight: 700, color: 'var(--text1)' }}>📦 Productos / Servicios</span>
@@ -297,7 +314,7 @@ export default function NuevaFactura() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                                 <thead>
                                     <tr style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
-                                        {['Producto', 'Descripción', 'Cant.', 'Precio Unit.', 'Desc.%', 'IVA', 'Obsequio', ''].map(h => (
+                                        {['Producto', 'Descripción', 'Cant.', 'Precio', 'Desc.%', 'IVA', 'IVA Inc.', 'Obsequio', ''].map(h => (
                                             <th key={h} style={{
                                                 padding: '8px 6px', textAlign: 'left', color: 'var(--text3)',
                                                 fontSize: 11, textTransform: 'uppercase', fontWeight: 600
@@ -306,66 +323,102 @@ export default function NuevaFactura() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {items.map((item, idx) => (
-                                        <tr key={item._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                            <td style={{ padding: '6px 4px', minWidth: 140 }}>
-                                                <select className="form-control" style={{ fontSize: 11 }}
-                                                    value={item.producto}
-                                                    onChange={e => updItem(item._id, 'producto', e.target.value)}>
-                                                    <option value="">Manual</option>
-                                                    {productos.map(p => (
-                                                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td style={{ padding: '6px 4px', minWidth: 160 }}>
-                                                <input className="form-control" style={{ fontSize: 11 }}
-                                                    value={item.descripcion}
-                                                    onChange={e => updItem(item._id, 'descripcion', e.target.value)}
-                                                    placeholder="Descripción del ítem" />
-                                            </td>
-                                            <td style={{ padding: '6px 4px', width: 70 }}>
-                                                <input className="form-control" type="number" min="0.001" step="0.001"
-                                                    style={{ fontSize: 11 }} value={item.cantidad}
-                                                    onChange={e => updItem(item._id, 'cantidad', e.target.value)} />
-                                            </td>
-                                            <td style={{ padding: '6px 4px', width: 110 }}>
-                                                <input className="form-control" type="number" min="0"
-                                                    style={{ fontSize: 11 }} value={item.precio_unitario}
-                                                    onChange={e => updItem(item._id, 'precio_unitario', e.target.value)}
-                                                    placeholder="0" />
-                                            </td>
-                                            <td style={{ padding: '6px 4px', width: 70 }}>
-                                                <input className="form-control" type="number" min="0" max="100"
-                                                    style={{ fontSize: 11 }} value={item.descuento_pct}
-                                                    disabled={item.es_obsequio}
-                                                    onChange={e => updItem(item._id, 'descuento_pct', e.target.value)} />
-                                            </td>
-                                            <td style={{ padding: '6px 4px', width: 100 }}>
-                                                <select className="form-control" style={{ fontSize: 11 }}
-                                                    value={item.iva_tipo}
-                                                    onChange={e => updItem(item._id, 'iva_tipo', e.target.value)}>
-                                                    {IVA_TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                                </select>
-                                            </td>
-                                            <td style={{ padding: '6px 4px', width: 70, textAlign: 'center' }}>
-                                                <input type="checkbox" checked={item.es_obsequio}
-                                                    onChange={e => updItem(item._id, 'es_obsequio', e.target.checked)}
-                                                    style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                                            </td>
-                                            <td style={{ padding: '6px 4px', width: 30 }}>
-                                                {items.length > 1 && (
-                                                    <button onClick={() => delItem(item._id)}
+                                    {items.map(item => {
+                                        // Precio que se muestra (con o sin IVA según configuración)
+                                        const precioMostrado = item.precio_unitario
+                                        const tieneIvaIncluido = item.iva_incluido
+
+                                        return (
+                                            <tr key={item._id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                <td style={{ padding: '6px 4px', minWidth: 140 }}>
+                                                    <select className="form-control" style={{ fontSize: 11 }}
+                                                        value={item.producto}
+                                                        onChange={e => updItem(item._id, 'producto', e.target.value)}>
+                                                        <option value="">Manual</option>
+                                                        {productos.map(p => (
+                                                            <option key={p.id} value={p.id}>
+                                                                {p.nombre} {p.iva_incluido ? '(IVA inc.)' : ''}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td style={{ padding: '6px 4px', minWidth: 140 }}>
+                                                    <input className="form-control" style={{ fontSize: 11 }}
+                                                        value={item.descripcion}
+                                                        onChange={e => updItem(item._id, 'descripcion', e.target.value)}
+                                                        placeholder="Descripción" />
+                                                </td>
+                                                <td style={{ padding: '6px 4px', width: 65 }}>
+                                                    <input className="form-control" type="number" min="0.001" step="0.001"
+                                                        style={{ fontSize: 11 }} value={item.cantidad}
+                                                        onChange={e => updItem(item._id, 'cantidad', e.target.value)} />
+                                                </td>
+                                                <td style={{ padding: '6px 4px', width: 110 }}>
+                                                    <input className="form-control" type="number" min="0"
                                                         style={{
-                                                            background: 'none', border: 'none', cursor: 'pointer',
-                                                            color: 'var(--danger)', fontSize: 16
-                                                        }}>×</button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                            fontSize: 11,
+                                                            borderColor: tieneIvaIncluido ? 'rgba(245,158,11,.5)' : undefined
+                                                        }}
+                                                        value={precioMostrado}
+                                                        onChange={e => updItem(item._id, 'precio_unitario', e.target.value)}
+                                                        placeholder="0" />
+                                                    {tieneIvaIncluido && (
+                                                        <div style={{ fontSize: 10, color: 'var(--warning)', marginTop: 2 }}>
+                                                            IVA incluido
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td style={{ padding: '6px 4px', width: 65 }}>
+                                                    <input className="form-control" type="number" min="0" max="100"
+                                                        style={{ fontSize: 11 }} value={item.descuento_pct}
+                                                        disabled={item.es_obsequio}
+                                                        onChange={e => updItem(item._id, 'descuento_pct', e.target.value)} />
+                                                </td>
+                                                <td style={{ padding: '6px 4px', width: 100 }}>
+                                                    <select className="form-control" style={{ fontSize: 11 }}
+                                                        value={item.iva_tipo}
+                                                        onChange={e => updItem(item._id, 'iva_tipo', e.target.value)}>
+                                                        {IVA_TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                                    </select>
+                                                </td>
+                                                {/* Checkbox IVA incluido */}
+                                                <td style={{ padding: '6px 4px', width: 60, textAlign: 'center' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                                        <input type="checkbox" checked={item.iva_incluido}
+                                                            onChange={e => updItem(item._id, 'iva_incluido', e.target.checked)}
+                                                            style={{ width: 16, height: 16, accentColor: 'var(--warning)' }} />
+                                                        <span style={{ fontSize: 9, color: 'var(--text3)' }}>inc.</span>
+                                                    </div>
+                                                </td>
+                                                {/* Checkbox obsequio */}
+                                                <td style={{ padding: '6px 4px', width: 65, textAlign: 'center' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                                        <input type="checkbox" checked={item.es_obsequio}
+                                                            onChange={e => updItem(item._id, 'es_obsequio', e.target.checked)}
+                                                            style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                                                        <span style={{ fontSize: 9, color: 'var(--text3)' }}>regalo</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '6px 4px', width: 30 }}>
+                                                    {items.length > 1 && (
+                                                        <button onClick={() => delItem(item._id)}
+                                                            style={{
+                                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                                color: 'var(--danger)', fontSize: 16
+                                                            }}>×</button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Leyenda */}
+                        <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text3)', display: 'flex', gap: 16 }}>
+                            <span>🟡 IVA inc. = el precio ya incluye el IVA, se discrimina automáticamente</span>
+                            <span>🎁 Regalo = obsequio con descuento 100%</span>
                         </div>
                     </div>
 
@@ -380,7 +433,7 @@ export default function NuevaFactura() {
                     </div>
                 </div>
 
-                {/* ── Columna derecha: resumen tributario ── */}
+                {/* ── Columna derecha: resumen ── */}
                 <div style={{ position: 'sticky', top: 20 }}>
                     <div className="table-wrapper" style={{ padding: 20 }}>
                         <div style={{ fontWeight: 700, marginBottom: 16, color: 'var(--text1)', fontSize: 14 }}>
@@ -398,20 +451,15 @@ export default function NuevaFactura() {
                                 {[
                                     ['Subtotal', fmt(totales.subtotal)],
                                     totales.descuento_total > 0
-                                        ? ['(-) Descuentos', `- ${fmt(totales.descuento_total)}`]
-                                        : null,
+                                        ? ['(-) Descuentos', `- ${fmt(totales.descuento_total)}`] : null,
                                     totales.base_iva_19 > 0
-                                        ? ['Base IVA 19%', fmt(totales.base_iva_19)]
-                                        : null,
+                                        ? ['Base IVA 19%', fmt(totales.base_iva_19)] : null,
                                     totales.valor_iva_19 > 0
-                                        ? ['IVA 19%', fmt(totales.valor_iva_19)]
-                                        : null,
+                                        ? ['IVA 19%', fmt(totales.valor_iva_19)] : null,
                                     totales.base_iva_5 > 0
-                                        ? ['Base IVA 5%', fmt(totales.base_iva_5)]
-                                        : null,
+                                        ? ['Base IVA 5%', fmt(totales.base_iva_5)] : null,
                                     totales.valor_iva_5 > 0
-                                        ? ['IVA 5%', fmt(totales.valor_iva_5)]
-                                        : null,
+                                        ? ['IVA 5%', fmt(totales.valor_iva_5)] : null,
                                     ['Total Bruto', fmt(totales.bruto_factura)],
                                 ].filter(Boolean).map(([k, v]) => (
                                     <div key={k} style={{
@@ -423,7 +471,6 @@ export default function NuevaFactura() {
                                     </div>
                                 ))}
 
-                                {/* Retenciones */}
                                 {totales.total_retenciones > 0 && (
                                     <div style={{
                                         marginTop: 4, padding: '8px 10px', borderRadius: 6,
@@ -453,7 +500,6 @@ export default function NuevaFactura() {
                                     </div>
                                 )}
 
-                                {/* Total final */}
                                 <div style={{
                                     marginTop: 8, padding: '12px', borderRadius: 8,
                                     background: 'rgba(16,185,129,.08)', border: '2px solid rgba(16,185,129,.3)',
@@ -465,7 +511,6 @@ export default function NuevaFactura() {
                                     </span>
                                 </div>
 
-                                {/* Info retenciones del cliente */}
                                 {!totales.cliente_agente_retenedor && (
                                     <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 4 }}>
                                         ✅ Cliente no aplica retenciones
