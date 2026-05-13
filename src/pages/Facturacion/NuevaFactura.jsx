@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { facturasAPI, clientesAPI, productosAPI } from '../../api/endpoints'
+import { facturasAPI, clientesAPI, productosAPI, usuariosAPI, bodegasAPI } from '../../api/endpoints'
 import { fmt } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
@@ -34,6 +34,7 @@ const CONCEPTOS_RET = [
 const itemVacio = () => ({
     _id: Math.random(),
     producto: '',
+    producto_search: '',
     descripcion: '',
     cantidad: 1,
     precio_unitario: '',
@@ -50,10 +51,14 @@ export default function NuevaFactura() {
 
     const [clientes, setClientes] = useState([])
     const [productos, setProductos] = useState([])
+    const [vendedores, setVendedores] = useState([])
+    const [bodegas, setBodegas] = useState([])
     const [loading, setLoading] = useState(false)
     const [calculando, setCalculando] = useState(false)
 
     const [clienteId, setClienteId] = useState('')
+    const [vendedorId, setVendedorId] = useState('')
+    const [bodegaId, setBodegaId] = useState('')
     const [condicion, setCondicion] = useState('Contado')
     const [medioPago, setMedioPago] = useState('Efectivo')
     const [conceptoRet, setConceptoRet] = useState('COMPRAS')
@@ -64,9 +69,13 @@ export default function NuevaFactura() {
 
     useEffect(() => {
         const loadData = async () => {
-            const [cl, pr] = await Promise.all([clientesAPI.list(), productosAPI.list()])
+            const [cl, pr, us, bo] = await Promise.all([
+                clientesAPI.list(), productosAPI.list(), usuariosAPI.list(), bodegasAPI.list()
+            ])
             setClientes(cl.data.results || cl.data)
             setProductos(pr.data.results || pr.data)
+            setVendedores(us.data.results || us.data)
+            setBodegas(bo.data.results || bo.data)
         }
         loadData()
 
@@ -75,6 +84,8 @@ export default function NuevaFactura() {
                 const f = r.data
                 setFactura(f)
                 setClienteId(f.cliente)
+                setVendedorId(f.vendedor || '')
+                setBodegaId(f.bodega || '')
                 setCondicion(f.condicion_pago)
                 setMedioPago(f.medio_pago)
                 setConceptoRet(f.concepto_retefuente || 'COMPRAS')
@@ -83,6 +94,7 @@ export default function NuevaFactura() {
                     setItems(f.detalles.map(d => ({
                         _id: d.id,
                         producto: d.producto || '',
+                        producto_search: d.producto_nombre ? `${d.producto_codigo} - ${d.producto_nombre}` : '',
                         descripcion: d.descripcion,
                         cantidad: d.cantidad,
                         precio_unitario: d.precio_unitario,
@@ -147,14 +159,17 @@ export default function NuevaFactura() {
             if (i._id !== id) return i
             const next = { ...i, [key]: val }
 
-            // Al seleccionar producto — autocompletar campos
-            if (key === 'producto' && val) {
-                const prod = productos.find(p => p.id == val)
+            // Al seleccionar producto por la búsqueda
+            if (key === 'producto_search') {
+                const prod = productos.find(p => `${p.codigo} - ${p.nombre}` === val)
                 if (prod) {
+                    next.producto = prod.id
                     next.descripcion = prod.nombre
-                    next.precio_unitario = prod.precio_venta  // precio que viene del producto (con o sin IVA)
+                    next.precio_unitario = prod.precio_venta
                     next.iva_tipo = prod.iva_tipo || '19'
                     next.iva_incluido = prod.iva_incluido || false
+                } else {
+                    next.producto = '' // Manual
                 }
             }
 
@@ -166,6 +181,7 @@ export default function NuevaFactura() {
     // ── Guardar factura ───────────────────────────────────────────────────────
     const guardar = async (emitir = false) => {
         if (!clienteId) { toast.error('Selecciona un cliente'); return }
+        if (emitir && !bodegaId) { toast.error('Debes seleccionar una Bodega de salida para emitir la factura'); return }
         const itemsValidos = items.filter(i => i.descripcion && parseFloat(i.precio_unitario) > 0)
         if (!itemsValidos.length) { toast.error('Agrega al menos un ítem válido'); return }
 
@@ -175,6 +191,8 @@ export default function NuevaFactura() {
 
             const payload = {
                 cliente: clienteId,
+                vendedor: vendedorId || null,
+                bodega: bodegaId || null,
                 condicion_pago: condicion,
                 medio_pago: medioPago,
                 concepto_retefuente: conceptoRet,
@@ -289,6 +307,29 @@ export default function NuevaFactura() {
                                 </select>
                             </div>
                         </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Vendedor</label>
+                                <select className="form-control" value={vendedorId}
+                                    onChange={e => setVendedorId(e.target.value)}>
+                                    <option value="">Seleccionar vendedor...</option>
+                                    {vendedores.filter(v => v.rol === 'Vendedor').map(v => (
+                                        <option key={v.id} value={v.id}>{v.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Bodega de salida *</label>
+                                <select className="form-control" value={bodegaId}
+                                    onChange={e => setBodegaId(e.target.value)}
+                                    style={{ borderColor: bodegaId ? undefined : 'var(--warning)' }}>
+                                    <option value="">Seleccionar bodega...</option>
+                                    {bodegas.map(b => (
+                                        <option key={b.id} value={b.id}>{b.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                         {clienteSel && (
                             <div style={{
                                 padding: '10px 14px', borderRadius: 8, fontSize: 12, color: 'var(--text2)',
@@ -330,17 +371,17 @@ export default function NuevaFactura() {
 
                                         return (
                                             <tr key={item._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                <td style={{ padding: '6px 4px', minWidth: 140 }}>
-                                                    <select className="form-control" style={{ fontSize: 11 }}
-                                                        value={item.producto}
-                                                        onChange={e => updItem(item._id, 'producto', e.target.value)}>
-                                                        <option value="">Manual</option>
+                                                <td style={{ padding: '6px 4px', minWidth: 160 }}>
+                                                    <input className="form-control" style={{ fontSize: 11 }}
+                                                        list={`prod-list-${item._id}`}
+                                                        placeholder="Buscar por código o nombre..."
+                                                        value={item.producto_search}
+                                                        onChange={e => updItem(item._id, 'producto_search', e.target.value)} />
+                                                    <datalist id={`prod-list-${item._id}`}>
                                                         {productos.map(p => (
-                                                            <option key={p.id} value={p.id}>
-                                                                {p.nombre} {p.iva_incluido ? '(IVA inc.)' : ''}
-                                                            </option>
+                                                            <option key={p.id} value={`${p.codigo} - ${p.nombre}`} />
                                                         ))}
-                                                    </select>
+                                                    </datalist>
                                                 </td>
                                                 <td style={{ padding: '6px 4px', minWidth: 140 }}>
                                                     <input className="form-control" style={{ fontSize: 11 }}

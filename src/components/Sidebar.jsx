@@ -11,8 +11,7 @@ const MENU = [
   {
     section: 'VENTAS',
     items: [
-      { path: '/facturas', icon: '🧾', label: 'Facturas', roles: ['Administrador', 'Contador'] },
-      { path: '/ventas', icon: '💰', label: 'Ventas', roles: ['Administrador', 'Contador', 'Vendedor'] },
+      { path: '/facturas', icon: '🧾', label: 'Facturas', roles: ['Administrador', 'Contador', 'Vendedor'] },
       { path: '/clientes', icon: '👥', label: 'Clientes', roles: ['Administrador', 'Contador', 'Vendedor'] },
       { path: '/entregas', icon: '🚚', label: 'Entregas', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica'] },
     ]
