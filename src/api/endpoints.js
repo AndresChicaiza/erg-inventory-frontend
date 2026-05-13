@@ -61,9 +61,10 @@ export const facturasAPI = {
   // Cálculo de impuestos sin guardar
   calcularImpuestos: (data) => api.post('/facturas/calcular-impuestos/', data),
 
-  // Emitir / anular
+  // Emitir / anular / pagar
   emitir: (id) => api.post(`/facturas/${id}/emitir/`),
   anular: (id, motivo) => api.post(`/facturas/${id}/anular/`, { motivo }),
+  pagar: (id) => api.post(`/facturas/${id}/pagar/`),
 
   // PDF — respuesta blob
   pdf: (id) => api.get(`/facturas/${id}/pdf/`, { responseType: 'blob' }),

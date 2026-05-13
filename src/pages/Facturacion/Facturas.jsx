@@ -78,6 +78,17 @@ export default function Facturas() {
         }
     }
 
+    const pagar = async (id) => {
+        if (!confirm('¿Marcar esta factura como pagada?')) return
+        try {
+            await facturasAPI.pagar(id)
+            toast.success('Factura marcada como pagada')
+            load()
+        } catch (e) {
+            toast.error(e.response?.data?.error || 'Error al marcar como pagada')
+        }
+    }
+
     return (
         <div>
             <div className="page-header">
@@ -157,6 +168,10 @@ export default function Facturas() {
                                                 onClick={() => navigate(`/facturas/${f.id}`)}>👁️</button>
                                             <button className="btn-icon" title="Descargar PDF"
                                                 onClick={() => descargarPDF(f.id, f.numero_completo)}>📄</button>
+                                            {(f.estado === 'Emitida' || f.estado === 'Vencida') && (
+                                                <button className="btn-icon" title="Marcar como Pagada"
+                                                    onClick={() => pagar(f.id)}>💰</button>
+                                            )}
                                             {f.estado !== 'Anulada' && f.estado !== 'Pagada' && (
                                                 <button className="btn-icon" title="Anular"
                                                     onClick={() => anular(f.id)}>🚫</button>
