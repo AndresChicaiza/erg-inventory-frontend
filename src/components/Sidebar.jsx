@@ -26,6 +26,13 @@ const MENU = [
     ]
   },
   {
+    section: 'PRODUCCIÓN',
+    items: [
+      { path: '/produccion/ordenes', icon: '🔥', label: 'Órdenes Fab.', roles: ['Administrador', 'JefeFabrica'] },
+      { path: '/produccion/recetas', icon: '🧪', label: 'Recetas (BOM)', roles: ['Administrador', 'JefeFabrica'] },
+    ]
+  },
+  {
     section: 'COMPRAS',
     items: [
       { path: '/compras', icon: '🛒', label: 'Órd. Compra', roles: ['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero'] },

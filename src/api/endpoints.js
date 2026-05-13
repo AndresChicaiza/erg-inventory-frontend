@@ -44,13 +44,6 @@ export const bodegasAPI = {
   transferir: (data) => api.post('/bodegas/transferir/', data),
 }
 
-// ── Ventas ────────────────────────────────────────────────────────────────────
-export const ventasAPI = {
-  ...crud('ventas'),
-  porSede: (sedeId) => api.get('/ventas/', { params: { sede: sedeId } }),
-  porEmpleado: (userId) => api.get('/ventas/', { params: { responsable: userId } }),
-}
-
 // ── Facturación ───────────────────────────────────────────────────────────────
 export const facturasAPI = {
   ...crud('facturas'),
@@ -148,4 +141,18 @@ export const reportesAPI = {
 export const tarifasAPI = {
   retefuente: () => api.get('/configuracion/tarifas-retefuente/'),
   reteica: (ciudad) => api.get('/configuracion/tarifas-reteica/', { params: { ciudad } }),
+}
+
+// ── Producción ─────────────────────────────────────────────────────────────────
+export const produccionAPI = {
+  recetas: {
+    ...crud('produccion/recetas'),
+    ingredientes: (recetaId) => ({
+      ...crud(`produccion/recetas/${recetaId}/ingredientes`),
+    })
+  },
+  ordenes: {
+    ...crud('produccion/ordenes'),
+    completar: (id, consumos) => api.post(`/produccion/ordenes/${id}/completar/`, { consumos }),
+  }
 }

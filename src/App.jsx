@@ -12,9 +12,12 @@ import Productos from './pages/Productos/Productos'
 import Bodegas from './pages/Bodegas/Bodegas'
 import Movimientos from './pages/Movimientos/Movimientos'
 import Kardex from './pages/Kardex/Kardex'
-import Ventas from './pages/Ventas/Ventas'
 import Compras from './pages/Compras/Compras'
 import Entregas from './pages/Entregas/Entregas'
+
+// Producción
+import Recetas from './pages/Produccion/Recetas'
+import OrdenesProduccion from './pages/Produccion/Ordenes'
 import CXC from './pages/CXC/CXC'
 import CXP from './pages/CXP/CXP'
 import Reportes from './pages/Reportes/Reportes'
@@ -64,9 +67,8 @@ export default function App() {
 
             <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Ventas */}
+            {/* Clientes */}
             <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor']} />}>
-              <Route path="/ventas" element={<Ventas />} />
               <Route path="/clientes" element={<Clientes />} />
             </Route>
 
@@ -100,6 +102,12 @@ export default function App() {
             {/* Kardex */}
             <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Bodeguero']} />}>
               <Route path="/kardex" element={<Kardex />} />
+            </Route>
+
+            {/* Producción */}
+            <Route element={<RoleRoute roles={['Administrador', 'JefeFabrica']} />}>
+              <Route path="/produccion/recetas" element={<Recetas />} />
+              <Route path="/produccion/ordenes" element={<OrdenesProduccion />} />
             </Route>
 
             {/* Compras */}
