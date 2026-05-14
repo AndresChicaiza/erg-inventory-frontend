@@ -35,6 +35,7 @@ export const proveedoresAPI = crud('proveedores')
 export const productosAPI = {
   ...crud('productos'),
   stockBodegas: (id) => api.get(`/productos/${id}/stock-bodegas/`),
+  lotes: (id) => api.get(`/productos/${id}/lotes/`)
 }
 
 // ── Bodegas ───────────────────────────────────────────────────────────────────

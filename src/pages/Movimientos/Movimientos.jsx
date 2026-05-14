@@ -5,7 +5,7 @@ import Modal from '../../components/Modal'
 import { fmtDate } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
-const empty = { producto:'', tipo:'Entrada', cantidad:1, referencia:'', observacion:'' }
+const empty = { producto:'', tipo:'Entrada', cantidad:1, referencia:'', observacion:'', numero_lote:'', fecha_vencimiento:'' }
 
 export default function Movimientos() {
   const [data, setData]         = useState([])
@@ -14,6 +14,7 @@ export default function Movimientos() {
   const [modal, setModal]       = useState(false)
   const [form, setForm]         = useState(empty)
   const [loading, setLoading]   = useState(false)
+  const [lotes, setLotes]       = useState([])
 
   const load = async () => {
     try {
@@ -23,6 +24,16 @@ export default function Movimientos() {
     } catch { toast.error('Error cargando datos') }
   }
   useEffect(() => { load() }, [])
+
+  const selectedProduct = productos.find(p => p.id == form.producto)
+
+  useEffect(() => {
+    if (selectedProduct?.controla_vencimiento && form.tipo === 'Salida') {
+      productosAPI.lotes(selectedProduct.id).then(res => setLotes(res.data)).catch(console.error)
+    } else {
+      setLotes([])
+    }
+  }, [form.producto, form.tipo, selectedProduct])
 
   const filtered = data.filter(m => `${m.producto_nombre} ${m.tipo} ${m.referencia}`.toLowerCase().includes(search.toLowerCase()))
 
@@ -66,7 +77,11 @@ export default function Movimientos() {
             : filtered.map(m => (
               <tr key={m.id}>
                 <td>{fmtDate(m.fecha)}</td>
-                <td><strong>{m.producto_nombre}</strong><br/><span className="tag">{m.producto_codigo}</span></td>
+                <td>
+                  <strong>{m.producto_nombre}</strong><br/>
+                  <span className="tag">{m.producto_codigo}</span>
+                  {m.lote_nombre && <span className="tag" style={{ marginLeft: 6, background: 'var(--warning)', color: '#fff' }}>Lote: {m.lote_nombre}</span>}
+                </td>
                 <td>{tipoBadge(m.tipo)}</td>
                 <td><strong>{m.cantidad}</strong></td>
                 <td>{m.referencia ? <span className="tag">{m.referencia}</span> : '—'}</td>
@@ -96,6 +111,40 @@ export default function Movimientos() {
           <div className="form-group"><label>Cantidad</label><input className="form-control" type="number" min="1" value={form.cantidad} onChange={e=>setForm({...form,cantidad:+e.target.value})} /></div>
           <div className="form-group"><label>Referencia</label><input className="form-control" value={form.referencia} onChange={e=>setForm({...form,referencia:e.target.value})} placeholder="Factura, OC, etc." /></div>
         </div>
+
+        {selectedProduct?.controla_vencimiento && form.tipo !== 'Ajuste' && (
+          <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid var(--warning)', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+            <h4 style={{ color: 'var(--warning)', marginTop: 0, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 18 }}>⚠️</span> Control de Lotes
+            </h4>
+            
+            {form.tipo === 'Entrada' ? (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Número de Lote</label>
+                  <input className="form-control" value={form.numero_lote} onChange={e=>setForm({...form, numero_lote: e.target.value})} placeholder="Ej. LOTE-001" />
+                </div>
+                <div className="form-group">
+                  <label>Fecha de Vencimiento</label>
+                  <input className="form-control" type="date" value={form.fecha_vencimiento} onChange={e=>setForm({...form, fecha_vencimiento: e.target.value})} />
+                </div>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label>Seleccionar Lote de Salida</label>
+                <select className="form-control" value={form.numero_lote} onChange={e=>setForm({...form, numero_lote: e.target.value})}>
+                  <option value="">-- Seleccione un lote disponible --</option>
+                  {lotes.map(l => (
+                    <option key={l.id} value={l.numero_lote} disabled={l.stock_disponible <= 0}>
+                      Lote {l.numero_lote} (Disp: {l.stock_disponible} - Vence: {l.fecha_vencimiento})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="form-group"><label>Observación</label><input className="form-control" value={form.observacion} onChange={e=>setForm({...form,observacion:e.target.value})} placeholder="Observación opcional" /></div>
       </Modal>
     </div>

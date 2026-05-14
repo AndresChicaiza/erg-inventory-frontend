@@ -6,9 +6,9 @@ import { estadoBadge, stockBadge, fmt } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
 const empty = {
-  codigo: '', nombre: '', descripcion: '', categoria: '',
+  codigo: '', codigo_barras: '', nombre: '', descripcion: '', categoria: '',
   precio_venta: '', precio_costo: '', stock: 0, stock_minimo: 5,
-  estado: 'Activo', bodega_id: ''
+  estado: 'Activo', bodega_id: '', controla_vencimiento: false, imagen: null
 }
 
 export default function Productos() {
@@ -35,17 +35,19 @@ export default function Productos() {
   useEffect(() => { load() }, [])
 
   const filtered = data.filter(p =>
-    `${p.nombre} ${p.codigo} ${p.categoria}`.toLowerCase().includes(search.toLowerCase())
+    `${p.nombre} ${p.codigo} ${p.codigo_barras || ''} ${p.categoria}`.toLowerCase().includes(search.toLowerCase())
   )
   const cats = [...new Set(data.map(p => p.categoria))]
 
   const openNew = () => { setForm(empty); setEditing(null); setModal(true) }
   const openEdit = (p) => {
     setForm({
-      codigo: p.codigo, nombre: p.nombre, descripcion: p.descripcion || '',
+      codigo: p.codigo, codigo_barras: p.codigo_barras || '', nombre: p.nombre, descripcion: p.descripcion || '',
       categoria: p.categoria, precio_venta: p.precio_venta,
       precio_costo: p.precio_costo, stock: p.stock,
       stock_minimo: p.stock_minimo, estado: p.estado,
+      controla_vencimiento: p.controla_vencimiento || false,
+      imagen: null, // No precargamos el file object, solo lo mantenemos null para no sobreescribir
       bodega_id: ''  // edición no reasigna bodega
     })
     setEditing(p.id)
@@ -70,13 +72,20 @@ export default function Productos() {
     }
     setLoading(true)
     try {
-      const payload = { ...form }
+      const payload = new FormData()
+      Object.keys(form).forEach(key => {
+        if (key === 'imagen') {
+          if (form[key] instanceof File) payload.append(key, form[key])
+        } else if (key === 'bodega_id') {
+          if (!editing && form[key]) payload.append(key, form[key])
+        } else {
+          payload.append(key, form[key])
+        }
+      })
+
       if (editing) {
-        // Al editar no mandamos bodega_id (no tiene sentido reasignar)
-        delete payload.bodega_id
         await productosAPI.patch(editing, payload)
       } else {
-        if (!payload.bodega_id) delete payload.bodega_id
         await productosAPI.create(payload)
       }
       toast.success(editing ? 'Producto actualizado' : 'Producto creado')
@@ -117,17 +126,31 @@ export default function Productos() {
         <table>
           <thead>
             <tr>
-              <th>Código</th><th>Nombre</th><th>Categoría</th>
+              <th>Producto</th><th>Categoría</th>
               <th>Precio Venta</th><th>Stock Total</th><th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7}><div className="empty-state"><div className="empty-icon">📦</div><p>No hay productos</p></div></td></tr>
+              <tr><td colSpan={6}><div className="empty-state"><div className="empty-icon">📦</div><p>No hay productos</p></div></td></tr>
             ) : filtered.map(p => (
               <tr key={p.id}>
-                <td><span className="tag">{p.codigo}</span></td>
-                <td><strong>{p.nombre}</strong></td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {p.imagen ? (
+                      <img src={p.imagen} alt={p.nombre} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📦</div>
+                    )}
+                    <div>
+                      <strong>{p.nombre}</strong>
+                      <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+                        <span className="tag">{p.codigo}</span> {p.codigo_barras && <span style={{ marginLeft: 6 }}>||| {p.codigo_barras}</span>}
+                      </div>
+                      {p.controla_vencimiento && <span style={{ fontSize: 10, background: 'var(--warning)', color: '#fff', padding: '2px 6px', borderRadius: 4, marginTop: 4, display: 'inline-block' }}>Lotes/Venc.</span>}
+                    </div>
+                  </div>
+                </td>
                 <td><span className="badge badge-purple">{p.categoria}</span></td>
                 <td><strong>{fmt(p.precio_venta)}</strong></td>
                 <td>{stockBadge(p.stock, p.stock_minimo)}</td>
@@ -155,13 +178,18 @@ export default function Productos() {
 
         <div className="form-row">
           <div className="form-group">
-            <label>Código</label>
+            <label>Código Interno</label>
             <input className="form-control" value={form.codigo} onChange={e => setForm({ ...form, codigo: e.target.value })} placeholder="PRD-001" />
           </div>
           <div className="form-group">
-            <label>Nombre</label>
-            <input className="form-control" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre del producto" />
+            <label>Código de Barras (EAN/UPC)</label>
+            <input className="form-control" value={form.codigo_barras} onChange={e => setForm({ ...form, codigo_barras: e.target.value })} placeholder="Ej. 7701234567890" />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label>Nombre del Producto</label>
+          <input className="form-control" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre del producto" />
         </div>
 
         <div className="form-row">
@@ -185,6 +213,23 @@ export default function Productos() {
           <div className="form-group">
             <label>Precio Costo</label>
             <input className="form-control" type="number" value={form.precio_costo} onChange={e => setForm({ ...form, precio_costo: e.target.value })} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'var(--bg2)', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>📦 Gestión de Inventario</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+              <input type="checkbox" checked={form.controla_vencimiento} onChange={e => setForm({ ...form, controla_vencimiento: e.target.checked })} />
+              Controla Lotes y Vencimientos
+            </label>
+            <small style={{ display: 'block', color: 'var(--text3)', marginTop: 4, lineHeight: 1.3 }}>
+              Activa esto para alimentos perecederos. El sistema exigirá un N° de Lote y Fecha al registrar entradas o salidas.
+            </small>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>🖼️ Imagen del Producto</label>
+            <input type="file" accept="image/*" onChange={e => setForm({ ...form, imagen: e.target.files[0] })} className="form-control" style={{ padding: '4px' }} />
           </div>
         </div>
 
@@ -212,11 +257,6 @@ export default function Productos() {
             {form.stock > 0 && form.bodega_id && (
               <small style={{ color: 'var(--success)', marginTop: 4, display: 'block' }}>
                 ✅ Se registrarán {form.stock} unidades en la bodega seleccionada
-              </small>
-            )}
-            {form.stock > 0 && !form.bodega_id && (
-              <small style={{ color: 'var(--text3)', marginTop: 4, display: 'block' }}>
-                ⚠️ Sin bodega: el stock se guardará solo en el total del producto
               </small>
             )}
           </div>
