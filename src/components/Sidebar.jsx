@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useAlertas } from '../context/AlertasContext'
 import GlobalSearch from './GlobalSearch'
+import ergLogo from '../assets/logo-erg.png'
 
 const MENU = [
   {
@@ -109,13 +110,14 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      {/* Logo */}
-      <div className="sidebar-logo">
-        <div className="logo-icon">🌋</div>
-        <div>
-          <div className="logo-name">ERG Inventory</div>
-          <div className="logo-sub">Suministros Dacar</div>
-        </div>
+      {/* Logo ERG Inventory */}
+      <div className="sidebar-logo" style={{ padding: '16px 12px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img 
+          src={ergLogo} 
+          alt="ERG Inventory" 
+          style={{ width: 130, height: 'auto', cursor: 'pointer' }}
+          onClick={() => navigate('/dashboard')}
+        />
       </div>
 
       {/* Usuario actual */}

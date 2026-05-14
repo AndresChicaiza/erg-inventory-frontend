@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
+import ergLogo from '../assets/logo-erg.png'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -62,20 +63,20 @@ export default function Login() {
         boxShadow: '0 20px 60px rgba(0,0,0,.4)',
       }}>
 
-        {/* Logo y nombre */}
+        {/* Logo ERG Inventory */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            fontSize: 48, marginBottom: 8,
-            filter: 'drop-shadow(0 4px 12px rgba(220,38,38,.4))',
-          }}>🌋</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text1)' }}>
-            ERG Inventory
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>
-            SUMINISTROS DACAR S.A.S.
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 2, fontWeight: 600 }}>
-            VOLCANO ASADORES
+          <img 
+            src={ergLogo} 
+            alt="ERG Inventory" 
+            style={{ 
+              width: 180, 
+              height: 'auto', 
+              marginBottom: 12,
+              filter: 'drop-shadow(0 4px 20px rgba(99,102,241,.4))'
+            }} 
+          />
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+            Powered by <strong style={{ color: 'var(--accent)' }}>ERG Inventory</strong>
           </div>
         </div>
 
