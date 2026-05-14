@@ -75,7 +75,7 @@ export default function GlobalSearch() {
         <div style={{
           position: 'absolute', top: '105%', left: 0, right: 0,
           background: 'var(--bg2)', border: '1px solid var(--border2)',
-          borderRadius: 8, boxShadow: 'var(--shadow)', z-index: 2000,
+          borderRadius: 8, boxShadow: 'var(--shadow)', zIndex: 2000,
           maxHeight: 300, overflowY: 'auto',
         }}>
           {results.length === 0 ? (
