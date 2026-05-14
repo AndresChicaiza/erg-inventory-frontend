@@ -5,12 +5,13 @@ import Modal from '../../components/Modal'
 import { fmtDate } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
-const empty = { producto:'', tipo:'Entrada', cantidad:1, referencia:'', observacion:'', numero_lote:'', fecha_vencimiento:'' }
+const empty = { producto:'', bodega:'', tipo:'Entrada', cantidad:1, referencia:'', observacion:'', numero_lote:'', fecha_vencimiento:'' }
 
 export default function Movimientos() {
   const [data, setData]         = useState([])
   const [productos, setProductos] = useState([])
-  const [search, setSearch]     = useState('')
+  const [bodegas, setBodegas]     = useState([])
+  const [search, setSearch]       = useState('')
   const [modal, setModal]       = useState(false)
   const [form, setForm]         = useState(empty)
   const [loading, setLoading]   = useState(false)
@@ -18,9 +19,14 @@ export default function Movimientos() {
 
   const load = async () => {
     try {
-      const [m, p] = await Promise.all([movimientosAPI.list(), productosAPI.list()])
+      const [m, p, b] = await Promise.all([
+        movimientosAPI.list(), 
+        productosAPI.list(),
+        bodegasAPI.list()
+      ])
       setData(m.data.results || m.data)
       setProductos(p.data.results || p.data)
+      setBodegas(b.data.results || b.data)
     } catch { toast.error('Error cargando datos') }
   }
   useEffect(() => { load() }, [])
@@ -35,10 +41,10 @@ export default function Movimientos() {
     }
   }, [form.producto, form.tipo, selectedProduct])
 
-  const filtered = data.filter(m => `${m.producto_nombre} ${m.tipo} ${m.referencia}`.toLowerCase().includes(search.toLowerCase()))
+  const filtered = data.filter(m => `${m.producto_nombre} ${m.bodega_nombre} ${m.tipo} ${m.referencia}`.toLowerCase().includes(search.toLowerCase()))
 
   const save = async () => {
-    if (!form.producto || !form.cantidad) { toast.error('Producto y cantidad son requeridos'); return }
+    if (!form.producto || !form.bodega || !form.cantidad) { toast.error('Producto, Bodega y cantidad son requeridos'); return }
     setLoading(true)
     try {
       await movimientosAPI.create(form)
@@ -71,7 +77,7 @@ export default function Movimientos() {
           <div className="search-box"><span>🔍</span><input placeholder="Buscar movimiento..." value={search} onChange={e=>setSearch(e.target.value)} /></div>
         </div>
         <table>
-          <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Referencia</th><th>Observación</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Producto</th><th>Bodega</th><th>Tipo</th><th>Cantidad</th><th>Referencia</th></tr></thead>
           <tbody>
             {filtered.length === 0 ? <tr><td colSpan={6}><div className="empty-state"><div className="empty-icon">↔️</div><p>No hay movimientos</p></div></td></tr>
             : filtered.map(m => (
@@ -82,6 +88,7 @@ export default function Movimientos() {
                   <span className="tag">{m.producto_codigo}</span>
                   {m.lote_nombre && <span className="tag" style={{ marginLeft: 6, background: 'var(--warning)', color: '#fff' }}>Lote: {m.lote_nombre}</span>}
                 </td>
+                <td>{m.bodega_nombre || <span className="tag">Global</span>}</td>
                 <td>{tipoBadge(m.tipo)}</td>
                 <td><strong>{m.cantidad}</strong></td>
                 <td>{m.referencia ? <span className="tag">{m.referencia}</span> : '—'}</td>
@@ -101,6 +108,14 @@ export default function Movimientos() {
               {productos.map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {p.stock})</option>)}
             </select>
           </div>
+          <div className="form-group"><label>Bodega</label>
+            <select className="form-control" value={form.bodega} onChange={e=>setForm({...form,bodega:e.target.value})}>
+              <option value="">Seleccionar...</option>
+              {bodegas.map(b=><option key={b.id} value={b.id}>{b.nombre} ({b.ciudad})</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="form-row">
           <div className="form-group"><label>Tipo</label>
             <select className="form-control" value={form.tipo} onChange={e=>setForm({...form,tipo:e.target.value})}>
               <option>Entrada</option><option>Salida</option><option>Ajuste</option>
