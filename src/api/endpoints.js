@@ -85,6 +85,7 @@ export const comprasAPI = {
 export const entregasAPI = {
   ...crud('entregas'),
   actualizarEstado: (id, data) => api.patch(`/entregas/${id}/estado/`, data),
+  recibirTraslado: (id) => api.post(`/entregas/${id}/recibir/`),
 }
 
 // ── Movimientos ───────────────────────────────────────────────────────────────
