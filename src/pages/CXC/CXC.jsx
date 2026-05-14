@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { cxcAPI, clientesAPI } from '../../api/endpoints'
+import { cxcAPI, clientesAPI, reportesAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
 import { fmt, fmtDate } from '../helpers.jsx'
@@ -131,11 +131,28 @@ export default function CXC() {
     catch { toast.error('No se puede eliminar') }
   }
 
+  const exportarPDF = async () => {
+    try {
+      toast.loading('Generando PDF...', { id: 'pdf' })
+      const r = await reportesAPI.exportarCXC()
+      const url = window.URL.createObjectURL(new Blob([r.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'cxc_pendiente.pdf')
+      document.body.appendChild(link)
+      link.click()
+      toast.success('PDF generado', { id: 'pdf' })
+    } catch { toast.error('Error al generar PDF', { id: 'pdf' }) }
+  }
+
   return (
     <div>
       <div className="page-header">
         <div><h2>📥 Cuentas por Cobrar</h2><p>Cartera y cobros a clientes</p></div>
-        <button className="btn btn-primary" onClick={openNew}>+ Nueva CXC</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={exportarPDF}>📄 Exportar PDF</button>
+          <button className="btn btn-primary" onClick={openNew}>+ Nueva CXC</button>
+        </div>
       </div>
 
       {/* Alerta de vencimientos próximos */}

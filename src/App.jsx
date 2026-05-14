@@ -1,11 +1,13 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { AlertasProvider } from './context/AlertasContext'
 import Sidebar from './components/Sidebar'
 
 // Páginas existentes
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Usuarios from './pages/Usuarios/Usuarios'
+import LogsActividad from './pages/Usuarios/LogsActividad'
 import Clientes from './pages/Clientes/Clientes'
 import Proveedores from './pages/Proveedores/Proveedores'
 import Productos from './pages/Productos/Productos'
@@ -33,12 +35,14 @@ import VistaFactura from './pages/Facturacion/VistaFactura'
 // ── Layout ────────────────────────────────────────────────────────────────────
 function Layout() {
   return (
-    <div className="app-layout">
-      <Sidebar />
-      <main className="main-content">
-        <Outlet />
-      </main>
-    </div>
+    <AlertasProvider>
+      <div className="app-layout">
+        <Sidebar />
+        <main className="main-content">
+          <Outlet />
+        </main>
+      </div>
+    </AlertasProvider>
   )
 }
 
@@ -126,6 +130,7 @@ export default function App() {
             {/* Sistema */}
             <Route element={<RoleRoute roles={['Administrador']} />}>
               <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/logs"     element={<LogsActividad />} />
             </Route>
 
             {/* Configuración */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { cxpAPI, proveedoresAPI } from '../../api/endpoints'
+import { cxpAPI, proveedoresAPI, reportesAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
 import { fmt, fmtDate } from '../helpers.jsx'
@@ -136,11 +136,26 @@ export default function CXP() {
     catch { toast.error('No se puede eliminar') }
   }
 
+  const exportarPDF = async () => {
+    try {
+      toast.loading('Generando PDF...', { id: 'pdf' })
+      const r = await reportesAPI.exportarCXP()
+      const url = window.URL.createObjectURL(new Blob([r.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'cxp_pendiente.pdf')
+      document.body.appendChild(link)
+      link.click()
+      toast.success('PDF generado', { id: 'pdf' })
+    } catch { toast.error('Error al generar PDF', { id: 'pdf' }) }
+  }
+
   return (
     <div>
       <div className="page-header">
         <div><h2>📤 Cuentas por Pagar</h2><p>Obligaciones con proveedores</p></div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={exportarPDF}>📄 Exportar PDF</button>
           <button className="btn btn-ghost" onClick={abrirResumen}>📊 Por Proveedor</button>
           <button className="btn btn-primary" onClick={openNew}>+ Nueva CXP</button>
         </div>

@@ -184,7 +184,7 @@ export default function Compras() {
         <table>
           <thead><tr><th>ID</th><th>Fecha</th><th>Proveedor</th><th>Ítems</th><th>Total</th><th>Pago</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
-            {filtered.length === 0 ? <tr><td colSpan={7}><div className="empty-state"><div className="empty-icon">🛒</div><p>No hay órdenes de compra</p></div></td></tr>
+            {filtered.length === 0 ? <tr><td colSpan={8}><div className="empty-state"><div className="empty-icon">🛒</div><p>No hay órdenes de compra</p></div></td></tr>
             : filtered.map(c => (
               <tr key={c.id}>
                 <td><span className="tag">OC-{String(c.id).padStart(4,'0')}</span></td>

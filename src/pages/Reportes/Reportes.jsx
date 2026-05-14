@@ -173,6 +173,32 @@ export default function Reportes() {
             <FlujoCajaCard label="📅 Próximos 30 días" cobrar={flujo.cxc.proximo_mes} pagar={flujo.cxp.proximo_mes} />
           </div>
 
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+            <button className="btn btn-ghost" onClick={async () => {
+              try {
+                toast.loading('Generando PDF...', { id: 'pdf' })
+                const r = await reportesAPI.exportarCXC()
+                const url = window.URL.createObjectURL(new Blob([r.data]))
+                const link = document.createElement('a'); link.href = url
+                link.setAttribute('download', 'cxc_pendiente.pdf')
+                document.body.appendChild(link); link.click()
+                toast.success('PDF de Cartera generado', { id: 'pdf' })
+              } catch { toast.error('Error', { id: 'pdf' }) }
+            }}>📄 Exportar Cartera (CXC)</button>
+
+            <button className="btn btn-ghost" onClick={async () => {
+              try {
+                toast.loading('Generando PDF...', { id: 'pdf' })
+                const r = await reportesAPI.exportarCXP()
+                const url = window.URL.createObjectURL(new Blob([r.data]))
+                const link = document.createElement('a'); link.href = url
+                link.setAttribute('download', 'cxp_pendiente.pdf')
+                document.body.appendChild(link); link.click()
+                toast.success('PDF de Deudas generado', { id: 'pdf' })
+              } catch { toast.error('Error', { id: 'pdf' }) }
+            }}>📄 Exportar Deudas (CXP)</button>
+          </div>
+
           {/* Tablas top clientes/proveedores */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="card">

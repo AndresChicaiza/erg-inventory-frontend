@@ -17,6 +17,12 @@ const crud = (path) => ({
   delete: (id) => api.delete(`/${path}/${id}/`),
 })
 
+// ── Core (Logs y Búsqueda) ───────────────────────────────────────────────────
+export const coreAPI = {
+  search: (q) => api.get('/core/search/', { params: { q } }),
+  logs:   (params) => api.get('/core/logs/', { params }),
+}
+
 // ── Usuarios y Sedes ──────────────────────────────────────────────────────────
 export const usuariosAPI = crud('usuarios')
 export const sedesAPI = crud('sedes')
@@ -117,13 +123,7 @@ export const cxpAPI = {
   porProveedor: () => api.get('/cxp/por-proveedor/'),
 }
 
-// ── RRHH / Empleados ──────────────────────────────────────────────────────────
-export const empleadosAPI = {
-  ...crud('empleados'),
-  comisiones: (id, params) => api.get(`/empleados/${id}/comisiones/`, { params }),
-}
-
-// ── Empleados (RRHH) ──────────────────────────────────────────────────────────
+// ── Empleados (RRHH) ─────────────────────────────────────────────────────────
 export const empleadosRRHHAPI = {
   ...crud('nomina/empleados'),
 }
@@ -137,10 +137,14 @@ export const nominaAPI = {
 
 // ── Reportes ──────────────────────────────────────────────────────────────────
 export const reportesAPI = {
-  resumen: () => api.get('/reportes/resumen/'),
-  ventasPorSede: (params) => api.get('/reportes/ventas-sede/', { params }),
-  tributario: (params) => api.get('/reportes/tributario/', { params }),
-  flujoCaja: () => api.get('/reportes/flujo-caja/'),
+  resumen:      () => api.get('/reportes/resumen/'),
+  alertas:      () => api.get('/reportes/alertas/'),
+  ventasPorSede:(params) => api.get('/reportes/ventas-sede/', { params }),
+  tributario:   (params) => api.get('/reportes/tributario/', { params }),
+  flujoCaja:    () => api.get('/reportes/flujo-caja/'),
+  exportarNomina: (periodoId) => api.get(`/reportes/exportar/nomina/${periodoId}/`, { responseType: 'blob' }),
+  exportarCXC:  () => api.get('/reportes/exportar/cxc/', { responseType: 'blob' }),
+  exportarCXP:  () => api.get('/reportes/exportar/cxp/', { responseType: 'blob' }),
 }
 
 // ── Tarifas tributarias ───────────────────────────────────────────────────────

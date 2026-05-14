@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { nominaAPI, empleadosRRHHAPI } from '../../api/endpoints'
+import { useState, useEffect } from 'react'
+import { nominaAPI, empleadosRRHHAPI, reportesAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
 import { fmt, fmtDate } from '../helpers.jsx'
@@ -110,6 +110,21 @@ export default function Nomina() {
     catch { toast.error('No se puede eliminar') }
   }
 
+  const exportarPDF = async () => {
+    if (!periodoActivo) return
+    try {
+      toast.loading('Generando PDF...', { id: 'pdf' })
+      const r = await reportesAPI.exportarNomina(periodoActivo.id)
+      const url = window.URL.createObjectURL(new Blob([r.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `nomina_${periodoActivo.nombre}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      toast.success('PDF generado', { id: 'pdf' })
+    } catch { toast.error('Error al generar PDF', { id: 'pdf' }) }
+  }
+
   const filtP = periodos.filter(p => `${p.nombre} ${p.estado}`.toLowerCase().includes(search.toLowerCase()))
   const totalDevengado = lineas.reduce((s, l) => s + parseFloat(l.total_devengado || 0), 0)
   const totalDeducciones = lineas.reduce((s, l) => s + parseFloat(l.total_deducciones || 0), 0)
@@ -123,6 +138,7 @@ export default function Nomina() {
           ? <button className="btn btn-primary" onClick={() => { setFormP(emptyP); setEditP(null); setModalP(true) }}>+ Nuevo Período</button>
           : <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-ghost" onClick={() => { setTab('periodos'); setPeriodoActivo(null) }}>← Volver</button>
+            <button className="btn btn-ghost" onClick={exportarPDF}>📄 Exportar PDF</button>
             {periodoActivo?.estado === 'Borrador' && <>
               <button className="btn btn-ghost" onClick={() => cerrar(periodoActivo.id)}>✅ Aprobar Período</button>
               <button className="btn btn-primary" onClick={() => { setFormL({ ...emptyL, periodo: periodoActivo.id }); setEditL(null); setModalL(true) }}>+ Agregar Empleado</button>
