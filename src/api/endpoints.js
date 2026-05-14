@@ -137,6 +137,7 @@ export const reportesAPI = {
   resumen: () => api.get('/reportes/resumen/'),
   ventasPorSede: (params) => api.get('/reportes/ventas-sede/', { params }),
   tributario: (params) => api.get('/reportes/tributario/', { params }),
+  flujoCaja: () => api.get('/reportes/flujo-caja/'),
 }
 
 // ── Tarifas tributarias ───────────────────────────────────────────────────────
