@@ -15,16 +15,16 @@ const MENU = [
     items: [
       { path: '/facturas',  icon: '🧾', label: 'Facturas',  roles: ['Administrador', 'Contador', 'Vendedor'] },
       { path: '/clientes',  icon: '👥', label: 'Clientes',  roles: ['Administrador', 'Contador', 'Vendedor'] },
-      { path: '/entregas',  icon: '🚚', label: 'Entregas',  roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica'], alertKey: 'entregas' },
+      { path: '/entregas',  icon: '🚚', label: 'Entregas',  roles: ['Administrador', 'Logistica', 'Vendedor'], alertKey: 'entregas' },
     ]
   },
   {
     section: 'INVENTARIO',
     items: [
       { path: '/productos',   icon: '📦', label: 'Productos',   roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica', 'JefeFabrica', 'Bodeguero'], alertKey: 'stock' },
-      { path: '/bodegas',     icon: '🏪', label: 'Bodegas',     roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero'] },
-      { path: '/movimientos', icon: '🔄', label: 'Movimientos', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica'] },
-      { path: '/kardex',      icon: '📋', label: 'Kardex',      roles: ['Administrador', 'Contador', 'Bodeguero'] },
+      { path: '/bodegas',     icon: '🏪', label: 'Bodegas',     roles: ['Administrador', 'Contador', 'Logistica', 'Bodeguero', 'JefeFabrica'] },
+      { path: '/movimientos', icon: '🔄', label: 'Movimientos', roles: ['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero', 'JefeFabrica'] },
+      { path: '/kardex',      icon: '📋', label: 'Kardex',      roles: ['Administrador', 'Contador', 'Bodeguero', 'JefeFabrica'] },
     ]
   },
   {
@@ -37,8 +37,8 @@ const MENU = [
   {
     section: 'COMPRAS',
     items: [
-      { path: '/compras',     icon: '🛒', label: 'Órd. Compra', roles: ['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero'], alertKey: 'compras' },
-      { path: '/proveedores', icon: '🏭', label: 'Proveedores', roles: ['Administrador', 'Contador', 'Vendedor'] },
+      { path: '/compras',     icon: '🛒', label: 'Órd. Compra', roles: ['Administrador', 'Contador', 'JefeFabrica', 'Bodeguero'], alertKey: 'compras' },
+      { path: '/proveedores', icon: '🏭', label: 'Proveedores', roles: ['Administrador', 'Contador', 'JefeFabrica', 'Bodeguero'] },
     ]
   },
   {
@@ -61,7 +61,7 @@ const MENU = [
     items: [
       { path: '/usuarios',      icon: '👤', label: 'Usuarios',      roles: ['Administrador'] },
       { path: '/logs',          icon: '📜', label: 'Auditoría',     roles: ['Administrador'] },
-      { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['Administrador', 'Contador'] },
+      { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['Administrador'] },
     ]
   },
 ]

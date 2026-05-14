@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { productosAPI, bodegasAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
+import Pagination from '../../components/Pagination'
 import { estadoBadge, stockBadge, fmt } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
@@ -15,6 +16,9 @@ export default function Productos() {
   const [data, setData] = useState([])
   const [bodegas, setBodegas] = useState([])
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [paginationInfo, setPaginationInfo] = useState({ count: 0, next: null, previous: null })
+  
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null)
@@ -27,16 +31,28 @@ export default function Productos() {
 
   const load = async () => {
     try {
-      const [r, b] = await Promise.all([productosAPI.list(), bodegasAPI.list()])
-      setData(r.data.results || r.data)
+      const [r, b] = await Promise.all([
+        productosAPI.list({ search, page }), 
+        bodegasAPI.list()
+      ])
+      
+      // Manejar la respuesta paginada del backend
+      if (r.data.results) {
+        setData(r.data.results)
+        setPaginationInfo({ count: r.data.count, next: r.data.next, previous: r.data.previous })
+      } else {
+        setData(r.data) // Fallback si no hay paginación
+      }
+      
       setBodegas(b.data.results || b.data)
     } catch { toast.error('Error cargando datos') }
   }
-  useEffect(() => { load() }, [])
+  
+  // Recargar al cambiar página o búsqueda
+  useEffect(() => { load() }, [page, search])
 
-  const filtered = data.filter(p =>
-    `${p.nombre} ${p.codigo} ${p.codigo_barras || ''} ${p.categoria}`.toLowerCase().includes(search.toLowerCase())
-  )
+  // Eliminamos el filtrado local porque ahora se hace en el backend
+  const filtered = data 
   const cats = [...new Set(data.map(p => p.categoria))]
 
   const openNew = () => { setForm(empty); setEditing(null); setModal(true) }
@@ -102,11 +118,34 @@ export default function Productos() {
     catch (e) { toast.error(e.response?.data?.error || 'No se puede eliminar') }
   }
 
+  const handleImport = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('archivo', file)
+    
+    toast.loading('Importando...', { id: 'import' })
+    try {
+      const r = await productosAPI.importar(formData)
+      toast.success(r.data.mensaje || 'Importación exitosa', { id: 'import' })
+      load()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al importar', { id: 'import' })
+    }
+    e.target.value = null // reset file input
+  }
+
   return (
     <div>
       <div className="page-header">
         <div><h2>📦 Productos</h2><p>Control de inventario y stock</p></div>
-        <button className="btn btn-primary" onClick={openNew}>+ Nuevo Producto</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+            📥 Importar Excel
+            <input type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleImport} />
+          </label>
+          <button className="btn btn-primary" onClick={openNew}>+ Nuevo Producto</button>
+        </div>
       </div>
 
       <div className="stats-grid">
@@ -118,10 +157,15 @@ export default function Productos() {
 
       <div className="table-wrapper">
         <div className="table-toolbar">
-          <div className="search-box">
-            <span>🔍</span>
-            <input placeholder="Buscar producto..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
+        <div className="search-box">
+          <span style={{ opacity: 0.5 }}>🔍</span>
+          <input 
+            type="text" 
+            placeholder="Buscar por nombre o código..." 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setPage(1); }} 
+          />
+        </div>
         </div>
         <table>
           <thead>
@@ -164,6 +208,13 @@ export default function Productos() {
             ))}
           </tbody>
         </table>
+        <Pagination 
+          count={paginationInfo.count} 
+          next={paginationInfo.next} 
+          previous={paginationInfo.previous}
+          currentPage={page}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* ── Modal crear / editar ── */}

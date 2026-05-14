@@ -77,19 +77,23 @@ export default function App() {
               <Route path="/clientes" element={<Clientes />} />
             </Route>
 
-            {/* ✅ Facturación — Admin y Contador */}
-            <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
+            {/* ✅ Facturación — Vendedor, Contador y Admin */}
+            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor']} />}>
               <Route path="/facturas" element={<Facturas />} />
               <Route path="/facturas/nueva" element={<NuevaFactura />} />
               <Route path="/facturas/:id" element={<VistaFactura />} />
               <Route path="/facturas/:id/editar" element={<NuevaFactura />} />
+            </Route>
+
+            {/* Finanzas (CXC, CXP, Reportes) — solo Contador y Admin */}
+            <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
               <Route path="/cxc" element={<CXC />} />
               <Route path="/cxp" element={<CXP />} />
               <Route path="/reportes" element={<Reportes />} />
             </Route>
 
-            {/* Entregas */}
-            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica']} />}>
+            {/* Entregas: Vendedor las solicita, Logística las gestiona */}
+            <Route element={<RoleRoute roles={['Administrador', 'Logistica', 'Vendedor']} />}>
               <Route path="/entregas" element={<Entregas />} />
             </Route>
 
@@ -98,14 +102,18 @@ export default function App() {
               <Route path="/productos" element={<Productos />} />
             </Route>
 
-            {/* Bodegas y movimientos */}
-            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero']} />}>
+            {/* Bodegas: quienes manipulan stock */}
+            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Logistica', 'Bodeguero', 'JefeFabrica']} />}>
               <Route path="/bodegas" element={<Bodegas />} />
+            </Route>
+
+            {/* Movimientos: todos los roles logísticos */}
+            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'Logistica', 'Bodeguero', 'JefeFabrica']} />}>
               <Route path="/movimientos" element={<Movimientos />} />
             </Route>
 
-            {/* Kardex */}
-            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Bodeguero']} />}>
+            {/* Kardex: seguimiento contable y de bodega */}
+            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Bodeguero', 'JefeFabrica']} />}>
               <Route path="/kardex" element={<Kardex />} />
             </Route>
 
@@ -115,8 +123,8 @@ export default function App() {
               <Route path="/produccion/ordenes" element={<OrdenesProduccion />} />
             </Route>
 
-            {/* Compras */}
-            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'Vendedor', 'JefeFabrica', 'Bodeguero']} />}>
+            {/* Compras: OC solo quienes piden materia prima o tienda */}
+            <Route element={<RoleRoute roles={['Administrador', 'Contador', 'JefeFabrica', 'Bodeguero']} />}>
               <Route path="/compras" element={<Compras />} />
               <Route path="/proveedores" element={<Proveedores />} />
             </Route>
@@ -133,8 +141,8 @@ export default function App() {
               <Route path="/logs"     element={<LogsActividad />} />
             </Route>
 
-            {/* Configuración */}
-            <Route element={<RoleRoute roles={['Administrador', 'Contador']} />}>
+            {/* Configuración — solo Administrador */}
+            <Route element={<RoleRoute roles={['Administrador']} />}>
               <Route path="/configuracion" element={<Configuracion />} />
             </Route>
 

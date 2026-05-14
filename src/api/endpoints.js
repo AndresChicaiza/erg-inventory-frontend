@@ -34,14 +34,18 @@ export const configuracionAPI = {
 }
 
 // ── Clientes y Proveedores ────────────────────────────────────────────────────
-export const clientesAPI = crud('clientes')
+export const clientesAPI = {
+  ...crud('clientes'),
+  importar: (data) => api.post('/clientes/importar/', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
 export const proveedoresAPI = crud('proveedores')
 
 // ── Productos ─────────────────────────────────────────────────────────────────
 export const productosAPI = {
   ...crud('productos'),
   stockBodegas: (id) => api.get(`/productos/${id}/stock-bodegas/`),
-  lotes: (id) => api.get(`/productos/${id}/lotes/`)
+  lotes: (id) => api.get(`/productos/${id}/lotes/`),
+  importar: (data) => api.post('/productos/importar/', data, { headers: { 'Content-Type': 'multipart/form-data' } })
 }
 
 // ── Bodegas ───────────────────────────────────────────────────────────────────

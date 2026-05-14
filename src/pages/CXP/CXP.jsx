@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { cxpAPI, proveedoresAPI, reportesAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
+import Pagination from '../../components/Pagination'
 import { fmt, fmtDate } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
@@ -40,6 +41,8 @@ export default function CXP() {
   const [proveedores, setProveedores] = useState([])
   const [porProveedor, setPorProveedor] = useState([])
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [paginationInfo, setPaginationInfo] = useState({ count: 0, next: null, previous: null })
   const [filtroEstado, setFiltroEstado] = useState('')
   const [modal, setModal] = useState(false)
   const [modalPago, setModalPago] = useState(false)
@@ -53,13 +56,20 @@ export default function CXP() {
 
   const load = async () => {
     try {
-      const params = {}
+      const params = { search, page }
       if (filtroEstado) params.estado = filtroEstado
       const [c, p] = await Promise.all([
         cxpAPI.list(params),
         proveedoresAPI.list(),
       ])
-      setData(c.data.results || c.data)
+      
+      if (c.data.results) {
+        setData(c.data.results)
+        setPaginationInfo({ count: c.data.count, next: c.data.next, previous: c.data.previous })
+      } else {
+        setData(c.data)
+      }
+      
       setProveedores(p.data.results || p.data)
     } catch { toast.error('Error cargando datos') }
   }
@@ -72,12 +82,9 @@ export default function CXP() {
     } catch { }
   }
 
-  useEffect(() => { load() }, [filtroEstado])
+  useEffect(() => { load() }, [filtroEstado, page, search])
 
-  const filtered = data.filter(c =>
-    `${c.proveedor_nombre} ${c.proveedor_documento} ${c.concepto} ${c.estado}`
-      .toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = data
 
   const totalPend = data.filter(c => c.estado !== 'Pagada' && c.estado !== 'Anulada').reduce((s, c) => s + parseFloat(c.saldo || 0), 0)
   const totalVencido = data.filter(c => c.estado === 'Vencida').reduce((s, c) => s + parseFloat(c.saldo || 0), 0)
@@ -193,12 +200,15 @@ export default function CXP() {
       <div className="table-wrapper">
         <div className="table-toolbar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <div className="search-box">
-            <span>🔍</span>
-            <input placeholder="Buscar por proveedor, NIT, concepto..."
-              value={search} onChange={e => setSearch(e.target.value)} />
+            <span style={{ opacity: 0.5 }}>🔍</span>
+            <input 
+              placeholder="Buscar por proveedor, NIT, concepto..."
+              value={search} 
+              onChange={e => { setSearch(e.target.value); setPage(1); }} 
+            />
           </div>
           <select className="form-control" style={{ width: 160 }}
-            value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+            value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value); setPage(1); }}>
             <option value="">Todos los estados</option>
             {Object.keys(ESTADO_STYLE).map(e => <option key={e} value={e}>{e}</option>)}
           </select>
@@ -254,6 +264,14 @@ export default function CXP() {
             }
           </tbody>
         </table>
+        
+        <Pagination 
+          count={paginationInfo.count} 
+          next={paginationInfo.next} 
+          previous={paginationInfo.previous}
+          currentPage={page}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* ── Modal crear / editar ── */}

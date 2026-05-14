@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { clientesAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
+import Pagination from '../../components/Pagination'
 import toast from 'react-hot-toast'
 
 const TIPOS_DOC = ['NIT', 'CC', 'CE', 'PASAPORTE', 'NIT_EXTRAN', 'RUT']
@@ -38,6 +39,9 @@ const regLabel = (v) => REGIMENES.find(r => r.value === v)?.label || v
 export default function Clientes() {
   const [data, setData] = useState([])
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [paginationInfo, setPaginationInfo] = useState({ count: 0, next: null, previous: null })
+  
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null)
@@ -45,14 +49,21 @@ export default function Clientes() {
   const [tab, setTab] = useState('basico') // basico | tributario | contacto
 
   const load = async () => {
-    try { const r = await clientesAPI.list(); setData(r.data.results || r.data) }
+    try { 
+      const r = await clientesAPI.list({ search, page })
+      if (r.data.results) {
+        setData(r.data.results)
+        setPaginationInfo({ count: r.data.count, next: r.data.next, previous: r.data.previous })
+      } else {
+        setData(r.data)
+      }
+    }
     catch { toast.error('Error cargando clientes') }
   }
-  useEffect(() => { load() }, [])
+  
+  useEffect(() => { load() }, [page, search])
 
-  const filtered = data.filter(c =>
-    `${c.razon_social} ${c.numero_documento} ${c.ciudad}`.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = data
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
@@ -96,6 +107,23 @@ export default function Clientes() {
     catch { toast.error('No se puede eliminar — tiene registros asociados') }
   }
 
+  const handleImport = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('archivo', file)
+    
+    toast.loading('Importando...', { id: 'import' })
+    try {
+      const r = await clientesAPI.importar(formData)
+      toast.success(r.data.mensaje || 'Importación exitosa', { id: 'import' })
+      load()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al importar', { id: 'import' })
+    }
+    e.target.value = null
+  }
+
   const Check = ({ k, label }) => (
     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
       <input type="checkbox" checked={form[k]} onChange={e => f(k, e.target.checked)}
@@ -117,7 +145,13 @@ export default function Clientes() {
     <div>
       <div className="page-header">
         <div><h2>👥 Clientes</h2><p>Gestión de clientes con datos tributarios DIAN</p></div>
-        <button className="btn btn-primary" onClick={openNew}>+ Nuevo Cliente</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+            📥 Importar Excel
+            <input type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleImport} />
+          </label>
+          <button className="btn btn-primary" onClick={openNew}>+ Nuevo Cliente</button>
+        </div>
       </div>
 
       <div className="stats-grid">
@@ -130,9 +164,13 @@ export default function Clientes() {
       <div className="table-wrapper">
         <div className="table-toolbar">
           <div className="search-box">
-            <span>🔍</span>
-            <input placeholder="Buscar por nombre, NIT o ciudad..." value={search}
-              onChange={e => setSearch(e.target.value)} />
+            <span style={{ opacity: 0.5 }}>🔍</span>
+            <input 
+              type="text" 
+              placeholder="Buscar por NIT o Razón Social..." 
+              value={search} 
+              onChange={e => { setSearch(e.target.value); setPage(1); }} 
+            />
           </div>
         </div>
         <table>
@@ -170,6 +208,14 @@ export default function Clientes() {
             }
           </tbody>
         </table>
+        
+        <Pagination 
+          count={paginationInfo.count} 
+          next={paginationInfo.next} 
+          previous={paginationInfo.previous}
+          currentPage={page}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* ── Modal ── */}

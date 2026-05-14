@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { facturasAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
+import Pagination from '../../components/Pagination'
 import { fmt, fmtDate } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
@@ -29,16 +30,23 @@ export default function Facturas() {
     const [data, setData] = useState([])
     const [resumen, setResumen] = useState(null)
     const [search, setSearch] = useState('')
+    const [page, setPage] = useState(1)
+    const [paginationInfo, setPaginationInfo] = useState({ count: 0, next: null, previous: null })
     const [filtroEstado, setFiltroEstado] = useState('')
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
 
     const load = async () => {
         try {
-            const params = {}
+            const params = { search, page }
             if (filtroEstado) params.estado = filtroEstado
             const r = await facturasAPI.list(params)
-            setData(r.data.results || r.data)
+            if (r.data.results) {
+                setData(r.data.results)
+                setPaginationInfo({ count: r.data.count, next: r.data.next, previous: r.data.previous })
+            } else {
+                setData(r.data)
+            }
         } catch { toast.error('Error cargando facturas') }
 
         try {
@@ -47,12 +55,9 @@ export default function Facturas() {
         } catch { }
     }
 
-    useEffect(() => { load() }, [filtroEstado])
+    useEffect(() => { load() }, [filtroEstado, page, search])
 
-    const filtered = data.filter(f =>
-        `${f.numero_completo} ${f.cliente_razon_social} ${f.cliente_documento} ${f.estado}`
-            .toLowerCase().includes(search.toLowerCase())
-    )
+    const filtered = data
 
     const descargarPDF = async (id, numero) => {
         try {
@@ -118,12 +123,15 @@ export default function Facturas() {
             <div className="table-wrapper">
                 <div className="table-toolbar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <div className="search-box">
-                        <span>🔍</span>
-                        <input placeholder="Buscar por número, cliente, NIT..."
-                            value={search} onChange={e => setSearch(e.target.value)} />
+                        <span style={{ opacity: 0.5 }}>🔍</span>
+                        <input 
+                            placeholder="Buscar por número, cliente, NIT..."
+                            value={search} 
+                            onChange={e => { setSearch(e.target.value); setPage(1); }} 
+                        />
                     </div>
                     <select className="form-control" style={{ width: 160 }}
-                        value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+                        value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value); setPage(1); }}>
                         <option value="">Todos los estados</option>
                         {Object.keys(ESTADO_STYLE).map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
@@ -183,6 +191,14 @@ export default function Facturas() {
                         }
                     </tbody>
                 </table>
+                
+                <Pagination 
+                    count={paginationInfo.count} 
+                    next={paginationInfo.next} 
+                    previous={paginationInfo.previous}
+                    currentPage={page}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     )

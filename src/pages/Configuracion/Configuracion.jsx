@@ -1,31 +1,64 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { configuracionAPI } from '../../api/endpoints'
 import toast from 'react-hot-toast'
 
 export default function Configuracion() {
   const { user } = useAuth()
+  const [config, setConfig] = useState(null)
   const [toggles, setToggles] = useState({ notificaciones: true, confirmacion: true, kardex: true, oscuro: true })
+  
+  useEffect(() => {
+    configuracionAPI.get().then(r => setConfig(r.data)).catch(() => {})
+  }, [])
+
+  const handleSave = async () => {
+    if (!config) return
+    try {
+      await configuracionAPI.update(config)
+      toast.success('Configuración guardada')
+    } catch {
+      toast.error('Error al guardar configuración')
+    }
+  }
+
+  const handleChange = (e) => setConfig(p => ({ ...p, [e.target.name]: e.target.value }))
   const toggle = (k) => setToggles(t => ({ ...t, [k]: !t[k] }))
+
+  if (!config) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando configuración...</div>
 
   return (
     <div>
       <div className="page-header">
-        <div><h2>⚙️ Configuración</h2><p>Ajustes del sistema</p></div>
+        <div><h2>⚙️ Configuración</h2><p>Ajustes del sistema y de la empresa</p></div>
       </div>
 
       <div className="config-section">
-        <div className="config-title">Información del Sistema</div>
+        <div className="config-title">Información de la Empresa</div>
         <div className="form-row">
-          <div className="form-group"><label>Nombre del Sistema</label><input className="form-control" defaultValue="ERG-Inventory" /></div>
-          <div className="form-group"><label>Empresa</label><input className="form-control" defaultValue="Mi Empresa S.A.S" /></div>
-        </div>
-        <div className="form-row">
-          <div className="form-group"><label>NIT / RUT</label><input className="form-control" defaultValue="900.123.456-7" /></div>
-          <div className="form-group"><label>Moneda</label>
-            <select className="form-control"><option>COP (Peso Colombiano)</option><option>USD (Dólar)</option><option>EUR (Euro)</option></select>
+          <div className="form-group">
+            <label>Razón Social</label>
+            <input className="form-control" name="razon_social" value={config.razon_social || ''} onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label>Nombre Comercial</label>
+            <input className="form-control" name="nombre_comercial" value={config.nombre_comercial || ''} onChange={handleChange} />
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => toast.success('Configuración guardada')}>Guardar Cambios</button>
+        <div className="form-row">
+          <div className="form-group">
+            <label>NIT</label>
+            <input className="form-control" name="nit" value={config.nit || ''} onChange={handleChange} />
+          </div>
+          <div className="form-group">
+            <label>Fecha de Cierre Contable</label>
+            <input type="date" className="form-control" name="fecha_cierre_contable" value={config.fecha_cierre_contable || ''} onChange={handleChange} />
+            <span style={{ fontSize: 11, color: 'var(--text3)' }}>No se permitirán cambios antes o iguales a esta fecha.</span>
+          </div>
+        </div>
+        {user?.rol === 'Administrador' && (
+          <button className="btn btn-primary" onClick={handleSave}>Guardar Cambios</button>
+        )}
       </div>
 
       <div className="config-section">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { cxcAPI, clientesAPI, reportesAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
+import Pagination from '../../components/Pagination'
 import { fmt, fmtDate } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 
@@ -41,6 +42,8 @@ export default function CXC() {
   const [clientes, setClientes] = useState([])
   const [resumen, setResumen] = useState(null)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [paginationInfo, setPaginationInfo] = useState({ count: 0, next: null, previous: null })
   const [filtroEstado, setFiltroEstado] = useState('')
   const [modal, setModal] = useState(false)
   const [modalPago, setModalPago] = useState(false)
@@ -53,13 +56,20 @@ export default function CXC() {
 
   const load = async () => {
     try {
-      const params = {}
+      const params = { search, page }
       if (filtroEstado) params.estado = filtroEstado
       const [c, cl] = await Promise.all([
         cxcAPI.list(params),
         clientesAPI.list(),
       ])
-      setData(c.data.results || c.data)
+      
+      if (c.data.results) {
+        setData(c.data.results)
+        setPaginationInfo({ count: c.data.count, next: c.data.next, previous: c.data.previous })
+      } else {
+        setData(c.data)
+      }
+      
       setClientes(cl.data.results || cl.data)
 
       // Cargar resumen
@@ -70,12 +80,9 @@ export default function CXC() {
     } catch { toast.error('Error cargando datos') }
   }
 
-  useEffect(() => { load() }, [filtroEstado])
+  useEffect(() => { load() }, [filtroEstado, page, search])
 
-  const filtered = data.filter(c =>
-    `${c.cliente_nombre} ${c.cliente_documento} ${c.concepto} ${c.estado}`
-      .toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = data
 
   const totalPend = data.filter(c => c.estado !== 'Pagada' && c.estado !== 'Anulada').reduce((s, c) => s + parseFloat(c.saldo || 0), 0)
   const totalVencido = data.filter(c => c.estado === 'Vencida').reduce((s, c) => s + parseFloat(c.saldo || 0), 0)
@@ -188,12 +195,15 @@ export default function CXC() {
       <div className="table-wrapper">
         <div className="table-toolbar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <div className="search-box">
-            <span>🔍</span>
-            <input placeholder="Buscar por cliente, NIT, concepto..."
-              value={search} onChange={e => setSearch(e.target.value)} />
+            <span style={{ opacity: 0.5 }}>🔍</span>
+            <input 
+              placeholder="Buscar por cliente, NIT, concepto..."
+              value={search} 
+              onChange={e => { setSearch(e.target.value); setPage(1); }} 
+            />
           </div>
           <select className="form-control" style={{ width: 160 }}
-            value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+            value={filtroEstado} onChange={e => { setFiltroEstado(e.target.value); setPage(1); }}>
             <option value="">Todos los estados</option>
             {Object.keys(ESTADO_STYLE).map(e => <option key={e} value={e}>{e}</option>)}
           </select>
@@ -249,6 +259,14 @@ export default function CXC() {
             }
           </tbody>
         </table>
+        
+        <Pagination 
+          count={paginationInfo.count} 
+          next={paginationInfo.next} 
+          previous={paginationInfo.previous}
+          currentPage={page}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* ── Modal crear / editar ── */}
