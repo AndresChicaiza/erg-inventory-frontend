@@ -23,6 +23,7 @@ import CXP from './pages/CXP/CXP'
 import Reportes from './pages/Reportes/Reportes'
 import Configuracion from './pages/Configuracion/Configuracion'
 import Nomina from './pages/Nomina/Nomina'
+import Empleados from './pages/Empleados/Empleados'
 
 // ✅ Nuevas páginas de facturación
 import Facturas from './pages/Facturacion/Facturas'
@@ -118,7 +119,7 @@ export default function App() {
 
             {/* RRHH */}
             <Route element={<RoleRoute roles={['Administrador', 'Contador', 'RRHH']} />}>
-              <Route path="/empleados" element={<Dashboard />} />
+              <Route path="/empleados" element={<Empleados />} />
               <Route path="/nomina" element={<Nomina />} />
             </Route>
 

@@ -123,13 +123,16 @@ export const empleadosAPI = {
   comisiones: (id, params) => api.get(`/empleados/${id}/comisiones/`, { params }),
 }
 
+// ── Empleados (RRHH) ──────────────────────────────────────────────────────────
+export const empleadosRRHHAPI = {
+  ...crud('nomina/empleados'),
+}
+
 // ── Nómina ────────────────────────────────────────────────────────────────────
 export const nominaAPI = {
   periodos: crud('nomina/periodos'),
   lineas: crud('nomina/lineas'),
-  novedades: crud('nomina/novedades'),
   cerrar: (id) => api.post(`/nomina/periodos/${id}/cerrar/`),
-  generarComisiones: (id, data) => api.post(`/nomina/periodos/${id}/comisiones/`, data),
 }
 
 // ── Reportes ──────────────────────────────────────────────────────────────────
