@@ -44,6 +44,10 @@ export default function CXP() {
   const [page, setPage] = useState(1)
   const [paginationInfo, setPaginationInfo] = useState({ count: 0, next: null, previous: null })
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [venceDesde, setVenceDesde] = useState('')
+  const [venceHasta, setVenceHasta] = useState('')
   const [modal, setModal] = useState(false)
   const [modalPago, setModalPago] = useState(false)
   const [modalDetalle, setModalDetalle] = useState(false)
@@ -58,6 +62,10 @@ export default function CXP() {
     try {
       const params = { search, page }
       if (filtroEstado) params.estado = filtroEstado
+      if (fechaDesde) params.fecha_desde = fechaDesde
+      if (fechaHasta) params.fecha_hasta = fechaHasta
+      if (venceDesde) params.vence_desde = venceDesde
+      if (venceHasta) params.vence_hasta = venceHasta
       const [c, p] = await Promise.all([
         cxpAPI.list(params),
         proveedoresAPI.list(),
@@ -82,7 +90,7 @@ export default function CXP() {
     } catch { }
   }
 
-  useEffect(() => { load() }, [filtroEstado, page, search])
+  useEffect(() => { load() }, [filtroEstado, fechaDesde, fechaHasta, venceDesde, venceHasta, page, search])
 
   const filtered = data
 
@@ -198,7 +206,7 @@ export default function CXP() {
       </div>
 
       <div className="table-wrapper">
-        <div className="table-toolbar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div className="table-toolbar" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-box">
             <span style={{ opacity: 0.5 }}>🔍</span>
             <input 
@@ -212,6 +220,18 @@ export default function CXP() {
             <option value="">Todos los estados</option>
             {Object.keys(ESTADO_STYLE).map(e => <option key={e} value={e}>{e}</option>)}
           </select>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg)', padding: '4px 10px', borderRadius: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Emisión:</span>
+            <input type="date" className="form-control" style={{ width: 130 }} value={fechaDesde} onChange={e => { setFechaDesde(e.target.value); setPage(1); }} />
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>-</span>
+            <input type="date" className="form-control" style={{ width: 130 }} value={fechaHasta} onChange={e => { setFechaHasta(e.target.value); setPage(1); }} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg)', padding: '4px 10px', borderRadius: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Vence:</span>
+            <input type="date" className="form-control" style={{ width: 130 }} value={venceDesde} onChange={e => { setVenceDesde(e.target.value); setPage(1); }} />
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>-</span>
+            <input type="date" className="form-control" style={{ width: 130 }} value={venceHasta} onChange={e => { setVenceHasta(e.target.value); setPage(1); }} />
+          </div>
         </div>
 
         <table>

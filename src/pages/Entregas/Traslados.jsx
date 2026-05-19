@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { entregasAPI, bodegasAPI } from '../../api/endpoints'
+import { entregasAPI, bodegasAPI, productosAPI } from '../../api/endpoints'
 import { estadoBadge, fmtDate } from '../helpers.jsx'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'

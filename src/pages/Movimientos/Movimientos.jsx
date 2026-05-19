@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { movimientosAPI, productosAPI } from '../../api/endpoints'
+import { movimientosAPI, productosAPI, bodegasAPI } from '../../api/endpoints'
 import StatCard from '../../components/StatCard'
 import Modal from '../../components/Modal'
 import { fmtDate } from '../helpers.jsx'
